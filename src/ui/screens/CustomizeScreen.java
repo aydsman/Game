@@ -7,12 +7,12 @@ import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
 
-public class SettingsScreen {
+public class CustomizeScreen {
 
     private GamePanel gamePanel;
     private Rectangle backBtn = new Rectangle(10, 520, 120, 50);
 
-    public SettingsScreen(GamePanel gamePanel) {
+    public CustomizeScreen(GamePanel gamePanel) {
         this.gamePanel = gamePanel;
     }
 
@@ -26,7 +26,7 @@ public class SettingsScreen {
 
         g.setColor(Color.WHITE);
         g.setFont(new Font("Arial", Font.BOLD, 36));
-        g.drawString("Settings", 20, 50);
+        g.drawString("Customize", 20, 50);
 
         drawButton(g, backBtn, "Back");
     }

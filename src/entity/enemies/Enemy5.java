@@ -14,5 +14,6 @@ public class Enemy5 extends Enemy {
         damage = 1.0;
         speed = 3.0;
         color = Color.YELLOW;
+        ranged = true;
     }
 }

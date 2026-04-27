@@ -6,6 +6,15 @@ import java.awt.event.KeyListener;
 public class KeyHandler implements KeyListener {
 
     public boolean upPressed, downPressed, leftPressed, rightPressed;
+    public boolean rPressed = false;
+    public boolean lPressed = false;
+    public boolean oPressed = false;
+    public boolean spacePressed = false;
+    public boolean onePressed = false;
+    public boolean twoPressed = false;
+    public boolean threePressed = false;
+    public boolean fourPressed = false;
+    public boolean fivePressed = false;
 
     @Override
     public void keyPressed(KeyEvent e) {
@@ -14,6 +23,15 @@ public class KeyHandler implements KeyListener {
         if (code == KeyEvent.VK_S || code == KeyEvent.VK_DOWN)  downPressed = true;
         if (code == KeyEvent.VK_A || code == KeyEvent.VK_LEFT)  leftPressed = true;
         if (code == KeyEvent.VK_D || code == KeyEvent.VK_RIGHT) rightPressed = true;
+        if (code == KeyEvent.VK_R) rPressed = true;
+        if (code == KeyEvent.VK_L) lPressed = true;
+        if (code == KeyEvent.VK_O) oPressed = true;
+        if (code == KeyEvent.VK_SPACE) spacePressed = true;
+        if (code == KeyEvent.VK_1) onePressed = true;
+        if (code == KeyEvent.VK_2) twoPressed = true;
+        if (code == KeyEvent.VK_3) threePressed = true;
+        if (code == KeyEvent.VK_4) fourPressed = true;
+        if (code == KeyEvent.VK_5) fivePressed = true;
     }
 
     @Override
@@ -23,6 +41,15 @@ public class KeyHandler implements KeyListener {
         if (code == KeyEvent.VK_S || code == KeyEvent.VK_DOWN)  downPressed = false;
         if (code == KeyEvent.VK_A || code == KeyEvent.VK_LEFT)  leftPressed = false;
         if (code == KeyEvent.VK_D || code == KeyEvent.VK_RIGHT) rightPressed = false;
+        if (code == KeyEvent.VK_R) rPressed = false;
+        if (code == KeyEvent.VK_L) lPressed = false;
+        if (code == KeyEvent.VK_O) oPressed = false;
+        if (code == KeyEvent.VK_SPACE) spacePressed = false;
+        if (code == KeyEvent.VK_1) onePressed = false;
+        if (code == KeyEvent.VK_2) twoPressed = false;
+        if (code == KeyEvent.VK_3) threePressed = false;
+        if (code == KeyEvent.VK_4) fourPressed = false;
+        if (code == KeyEvent.VK_5) fivePressed = false;
     }
 
     @Override
