@@ -3,6 +3,7 @@ package entity;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.util.ArrayList;
+import java.util.List;
 import combat.Projectile;
 
 public class Enemy extends Entity {
@@ -100,9 +101,9 @@ public class Enemy extends Entity {
             long currentTime = System.currentTimeMillis();
             long fireRateMs = (long) (heldWeapon.getFireRate() * 1000);
             if (currentTime - lastShotTime >= fireRateMs) {
-                Projectile bullet = heldWeapon.shoot(getCenterX(), getCenterY(), barrelAngle);
-                if (bullet != null) {
-                    projectiles.add(bullet);
+                List<Projectile> bullets = heldWeapon.shoot(getCenterX(), getCenterY(), barrelAngle);
+                if (bullets != null) {
+                    projectiles.addAll(bullets);
                     lastShotTime = currentTime;
                 }
             }

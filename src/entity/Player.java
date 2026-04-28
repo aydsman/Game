@@ -2,6 +2,7 @@ package entity;
 
 import java.awt.Color;
 import java.util.ArrayList;
+import java.util.List;
 
 import combat.Projectile;
 import util.KeyHandler;
@@ -128,9 +129,9 @@ public class Player extends Entity {
 
     public void shoot() {
         if (heldWeapon != null) {
-            Projectile bullet = heldWeapon.shoot(getCenterX(), getCenterY(), barrelAngle);
-            if (bullet != null) {
-                projectiles.add(bullet);
+            List<Projectile> bullets = heldWeapon.shoot(getCenterX(), getCenterY(), barrelAngle);
+            if (bullets != null) {
+                projectiles.addAll(bullets);
             }
         }
     }

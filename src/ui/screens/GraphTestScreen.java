@@ -1,5 +1,6 @@
 package ui.screens;
 
+import ui.GamePanel;
 import world.dungeon.DungeonGenerator;
 import world.dungeon.Room;
 
@@ -10,20 +11,31 @@ import java.util.List;
 
 public class GraphTestScreen {
 
+    private GamePanel gamePanel;
     private DungeonGenerator generator;
     private List<Room> rooms;
     private int currentLevel;
+    private java.awt.Rectangle backBtn;
 
-    public GraphTestScreen() {
+    public GraphTestScreen(GamePanel gamePanel) {
+        this.gamePanel = gamePanel;
         this.generator = new DungeonGenerator();
         this.currentLevel = 1;
         this.rooms = generator.generateLevel(currentLevel);
+        this.backBtn = new java.awt.Rectangle(20, 20, 100, 40);
     }
 
     public void draw(Graphics2D g) {
         // Draw background
         g.setColor(new Color(30, 30, 30));
         g.fillRect(0, 0, 1600, 900);
+
+        // Draw back button
+        g.setColor(new Color(70, 70, 70));
+        g.fillRect(backBtn.x, backBtn.y, backBtn.width, backBtn.height);
+        g.setColor(Color.WHITE);
+        g.setFont(new Font("Arial", Font.BOLD, 16));
+        g.drawString("Back", backBtn.x + 30, backBtn.y + 25);
 
         // Draw title
         g.setColor(Color.WHITE);
@@ -104,5 +116,9 @@ public class GraphTestScreen {
             this.currentLevel = level;
             this.rooms = generator.generateLevel(currentLevel);
         }
+    }
+
+    public void handleClick(int x, int y) {
+        if (backBtn.contains(x, y)) gamePanel.switchScreen("menu");
     }
 }

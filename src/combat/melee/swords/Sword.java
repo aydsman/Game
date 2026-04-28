@@ -10,6 +10,7 @@ public class Sword extends Melee {
         damage = 20;
         range = 60.0; // 60 pixel range
         knockback = 3.0;
+        name = "Sword";
     }
 
     public Sword(int tier) {
@@ -19,5 +20,9 @@ public class Sword extends Melee {
         damage = 20;
         range = 60.0; // 60 pixel range
         knockback = 3.0;
+        name = "Sword";
+
+        // Apply tier multipliers after setting base stats
+        applyTierMultipliers();
     }
 }

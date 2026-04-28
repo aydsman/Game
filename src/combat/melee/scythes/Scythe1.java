@@ -11,5 +11,6 @@ public class Scythe1 extends Scythe {
         // Scythe1 specific stats (basic starter scythe)
         damage = 30;
         attackSpeed = 0.5;
+        name = "Scythe1";
     }
 }

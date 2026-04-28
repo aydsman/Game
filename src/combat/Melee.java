@@ -27,7 +27,7 @@ public class Melee extends Item {
         applyTierMultipliers();
     }
 
-    private void applyTierMultipliers() {
+    protected void applyTierMultipliers() {
         double damageMultiplier = 1.0;
         double attackSpeedMultiplier = 1.0;
         double rangeMultiplier = 1.0;
@@ -70,9 +70,30 @@ public class Melee extends Item {
         attackSpeed *= attackSpeedMultiplier;
         range *= rangeMultiplier;
         knockback *= knockbackMultiplier;
+
+        // Round to 2 decimal places
+        attackSpeed = Math.round(attackSpeed * 100.0) / 100.0;
+        range = Math.round(range * 100.0) / 100.0;
+        knockback = Math.round(knockback * 100.0) / 100.0;
     }
 
     public void attack() {
         // attack logic will go here
+    }
+
+    public int getDamage() {
+        return damage;
+    }
+
+    public double getAttackSpeed() {
+        return attackSpeed;
+    }
+
+    public double getRange() {
+        return range;
+    }
+
+    public double getKnockback() {
+        return knockback;
     }
 }

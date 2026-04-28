@@ -9,6 +9,7 @@ public class Rifle extends Ranged {
         fireRate = 0.15; // seconds between shots
         damage = 3;
         accuracy = 0.85;
+        accuracyAngle = 20.0; // ±20 degrees spread
         magazineSize = 25;
         reloadTime = 2.0;
         currentAmmo = magazineSize;
@@ -25,8 +26,9 @@ public class Rifle extends Ranged {
         super(tier);
         // base rifle stats: medium fire rate, medium-high damage, medium accuracy
         fireRate = 0.15; // seconds between shots
-        damage = 3;
+        damage = 15;
         accuracy = 0.85;
+        accuracyAngle = 20.0; // ±20 degrees spread
         magazineSize = 25;
         reloadTime = 2.0;
         currentAmmo = magazineSize;
@@ -37,5 +39,8 @@ public class Rifle extends Ranged {
         barrelHeight = 14; // medium height (7 above, 7 below center)
         name = "Rifle";
         automatic = true;
+
+        // Apply tier multipliers after setting base stats
+        applyTierMultipliers();
     }
 }

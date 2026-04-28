@@ -9,6 +9,7 @@ public class KeyHandler implements KeyListener {
     public boolean rPressed = false;
     public boolean lPressed = false;
     public boolean oPressed = false;
+    public boolean ePressed = false;
     public boolean spacePressed = false;
     public boolean onePressed = false;
     public boolean twoPressed = false;
@@ -26,6 +27,7 @@ public class KeyHandler implements KeyListener {
         if (code == KeyEvent.VK_R) rPressed = true;
         if (code == KeyEvent.VK_L) lPressed = true;
         if (code == KeyEvent.VK_O) oPressed = true;
+        if (code == KeyEvent.VK_E) ePressed = true;
         if (code == KeyEvent.VK_SPACE) spacePressed = true;
         if (code == KeyEvent.VK_1) onePressed = true;
         if (code == KeyEvent.VK_2) twoPressed = true;
@@ -44,6 +46,7 @@ public class KeyHandler implements KeyListener {
         if (code == KeyEvent.VK_R) rPressed = false;
         if (code == KeyEvent.VK_L) lPressed = false;
         if (code == KeyEvent.VK_O) oPressed = false;
+        if (code == KeyEvent.VK_E) ePressed = false;
         if (code == KeyEvent.VK_SPACE) spacePressed = false;
         if (code == KeyEvent.VK_1) onePressed = false;
         if (code == KeyEvent.VK_2) twoPressed = false;

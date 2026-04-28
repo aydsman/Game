@@ -11,5 +11,6 @@ public class Mace1 extends Mace {
         // Mace1 specific stats (basic starter mace)
         damage = 25;
         attackSpeed = 0.9;
+        name = "Mace1";
     }
 }

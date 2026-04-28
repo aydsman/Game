@@ -10,6 +10,7 @@ public class Item {
     public Item() {
         this.tier = 1;
         this.rarity = "Tier I";
+        this.description = "null";
     }
 
     public Item(int tier) {

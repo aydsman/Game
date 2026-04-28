@@ -1,12 +1,15 @@
 package combat;
 
 import java.awt.Color;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Ranged extends Item {
 
     protected double fireRate; // seconds between shots
     protected int damage; // damage per shot
     protected double accuracy; // 0.0 to 1.0 (100%)
+    protected double accuracyAngle; // degrees of spread (e.g., 10 = ±10 degrees from barrel direction)
     protected int magazineSize; // bullets per magazine
     protected double reloadTime; // seconds to reload
     protected int currentAmmo; // current ammo in magazine
@@ -24,6 +27,7 @@ public class Ranged extends Item {
         fireRate = 0.5;
         damage = 10;
         accuracy = 0.8;
+        accuracyAngle = 15.0; // ±15 degrees spread
         magazineSize = 10;
         reloadTime = 2.0;
         currentAmmo = magazineSize;
@@ -43,6 +47,7 @@ public class Ranged extends Item {
         fireRate = 0.5;
         damage = 10;
         accuracy = 0.8;
+        accuracyAngle = 15.0; // ±15 degrees spread
         magazineSize = 10;
         reloadTime = 2.0;
         currentAmmo = magazineSize;
@@ -58,50 +63,70 @@ public class Ranged extends Item {
         applyTierMultipliers();
     }
 
-    private void applyTierMultipliers() {
+    protected void applyTierMultipliers() {
         double damageMultiplier = 1.0;
         double fireRateMultiplier = 1.0;
         double accuracyMultiplier = 1.0;
+        double reloadTimeMultiplier = 1.0;
         int magazineBonus = 0;
+        double accuracyAngleReduction = 0.0; // degrees to reduce spread
 
         switch (tier) {
             case 1: // Tier I - Common (no boost)
                 damageMultiplier = 1.0;
                 fireRateMultiplier = 1.0;
                 accuracyMultiplier = 1.0;
+                reloadTimeMultiplier = 1.0;
                 magazineBonus = 0;
+                accuracyAngleReduction = 0.0;
                 break;
             case 2: // Tier II - Uncommon (minimal boost)
                 damageMultiplier = 1.1;
                 fireRateMultiplier = 1.05;
                 accuracyMultiplier = 1.05;
+                reloadTimeMultiplier = 0.95;
                 magazineBonus = 2;
+                accuracyAngleReduction = 2.0;
                 break;
             case 3: // Tier III - Rare (minimal boost)
                 damageMultiplier = 1.2;
                 fireRateMultiplier = 1.1;
                 accuracyMultiplier = 1.1;
+                reloadTimeMultiplier = 0.9;
                 magazineBonus = 4;
+                accuracyAngleReduction = 4.0;
                 break;
-            case 4: // Tier IV - Epic (better boost)
-                damageMultiplier = 1.4;
-                fireRateMultiplier = 1.2;
-                accuracyMultiplier = 1.15;
-                magazineBonus = 6;
-                break;
-            case 5: // Tier V - Legendary (best boost)
-                damageMultiplier = 1.7;
-                fireRateMultiplier = 1.3;
+            case 4: // Tier IV - Epic (significantly better boost)
+                damageMultiplier = 1.6;
+                fireRateMultiplier = 1.25;
                 accuracyMultiplier = 1.2;
+                reloadTimeMultiplier = 0.8;
                 magazineBonus = 8;
+                accuracyAngleReduction = 8.0;
+                break;
+            case 5: // Tier V - Legendary (best boost - much better)
+                damageMultiplier = 2.0;
+                fireRateMultiplier = 1.4;
+                accuracyMultiplier = 1.25;
+                reloadTimeMultiplier = 0.7;
+                magazineBonus = 12;
+                accuracyAngleReduction = 12.0;
                 break;
         }
 
         damage *= damageMultiplier;
         fireRate /= fireRateMultiplier; // Lower fireRate = faster shooting
-        accuracy = Math.min(1.0, accuracy * accuracyMultiplier);
+        accuracy = Math.min(0.95, accuracy * accuracyMultiplier); // Cap at 95%
+        reloadTime *= reloadTimeMultiplier; // Lower reloadTime = faster reload
         magazineSize += magazineBonus;
+        accuracyAngle = Math.max(2.0, accuracyAngle - accuracyAngleReduction); // Minimum 2 degrees spread
         currentAmmo = magazineSize;
+
+        // Round to 2 decimal places
+        fireRate = Math.round(fireRate * 100.0) / 100.0;
+        accuracy = Math.round(accuracy * 100.0) / 100.0;
+        reloadTime = Math.round(reloadTime * 100.0) / 100.0;
+        accuracyAngle = Math.round(accuracyAngle * 100.0) / 100.0;
     }
 
     public int[] getBarrelTip(int centerX, int centerY, double barrelAngle) {
@@ -110,24 +135,32 @@ public class Ranged extends Item {
         return new int[]{tipX, tipY};
     }
 
-    public Projectile shoot(int centerX, int centerY, double barrelAngle) {
+    public List<Projectile> shoot(int centerX, int centerY, double barrelAngle) {
         if (currentAmmo <= 0) {
             return null; // out of ammo
         }
-        
+
         currentAmmo--;
-        
+
+        List<Projectile> projectiles = new ArrayList<>();
+
         // Get barrel tip position
         int[] tip = getBarrelTip(centerX, centerY, barrelAngle);
-        
-        // Create projectile at barrel tip with barrel angle and weapon damage
+
+        // Apply accuracy angle spread
+        double spreadRadians = Math.toRadians(accuracyAngle);
+        double randomSpread = (Math.random() - 0.5) * 2.0 * spreadRadians; // -accuracyAngle to +accuracyAngle
+        double finalAngle = barrelAngle + randomSpread;
+
+        // Create projectile at barrel tip with final angle and weapon damage
         Color projectileColor = getProjectileColor();
-        Projectile projectile = new Projectile(tip[0], tip[1], projectileColor, 5.0, barrelAngle, damage);
-        
-        return projectile;
+        Projectile projectile = new Projectile(tip[0], tip[1], projectileColor, 5.0, finalAngle, damage);
+        projectiles.add(projectile);
+
+        return projectiles;
     }
 
-    private Color getProjectileColor() {
+    protected Color getProjectileColor() {
         switch (projectileColor.toLowerCase()) {
             case "red":
                 return Color.RED;
@@ -162,7 +195,7 @@ public class Ranged extends Item {
             }
         }
     }
-    
+
     // Getter methods for visual properties
     public String getBarrelColor() {
         return barrelColor;
@@ -198,5 +231,21 @@ public class Ranged extends Item {
 
     public boolean isReloading() {
         return isReloading;
+    }
+
+    public int getDamage() {
+        return damage;
+    }
+
+    public double getAccuracy() {
+        return accuracy;
+    }
+
+    public double getReloadTime() {
+        return reloadTime;
+    }
+
+    public double getAccuracyAngle() {
+        return accuracyAngle;
     }
 }

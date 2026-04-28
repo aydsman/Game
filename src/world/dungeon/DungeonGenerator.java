@@ -150,8 +150,16 @@ public class DungeonGenerator {
             bossRoom = findFurthestRoom(spawnRoom);
             if (bossRoom != null) {
                 int bossRoomId = bossRoom.getId();
+                List<Room> originalConnections = new ArrayList<>(bossRoom.getConnections());
                 bossRoom = new Room(bossRoomId, bossRoom.getX(), bossRoom.getY(),
                                    bossRoom.getWidth(), bossRoom.getHeight(), Room.RoomType.BOSS);
+                // Preserve connections from original room
+                for (Room conn : originalConnections) {
+                    bossRoom.addConnection(conn);
+                    // Update the connected room's connections to point to the new boss room
+                    conn.getConnections().removeIf(r -> r.getId() == bossRoomId);
+                    conn.addConnection(bossRoom);
+                }
                 rooms.removeIf(r -> r.getId() == bossRoomId);
                 rooms.add(bossRoom);
             }
@@ -251,8 +259,16 @@ public class DungeonGenerator {
                 assignableRooms.remove(lootRoom);
             }
             int lootRoomId = lootRoom.getId();
+            List<Room> originalConnections = new ArrayList<>(lootRoom.getConnections());
             lootRoom = new Room(lootRoomId, lootRoom.getX(), lootRoom.getY(),
                                lootRoom.getWidth(), lootRoom.getHeight(), Room.RoomType.LOOT);
+            // Preserve connections from original room
+            for (Room conn : originalConnections) {
+                lootRoom.addConnection(conn);
+                // Update the connected room's connections to point to the new loot room
+                conn.getConnections().removeIf(r -> r.getId() == lootRoomId);
+                conn.addConnection(lootRoom);
+            }
             rooms.removeIf(r -> r.getId() == lootRoomId);
             rooms.add(lootRoom);
         }
@@ -261,8 +277,16 @@ public class DungeonGenerator {
         if (level >= 2 && level <= 4 && random.nextDouble() < 0.33 && !assignableRooms.isEmpty()) {
             Room minibossRoom = assignableRooms.remove(random.nextInt(assignableRooms.size()));
             int minibossRoomId = minibossRoom.getId();
+            List<Room> originalConnections = new ArrayList<>(minibossRoom.getConnections());
             minibossRoom = new Room(minibossRoomId, minibossRoom.getX(), minibossRoom.getY(),
                                    minibossRoom.getWidth(), minibossRoom.getHeight(), Room.RoomType.MINIBOSS);
+            // Preserve connections from original room
+            for (Room conn : originalConnections) {
+                minibossRoom.addConnection(conn);
+                // Update the connected room's connections to point to the new miniboss room
+                conn.getConnections().removeIf(r -> r.getId() == minibossRoomId);
+                conn.addConnection(minibossRoom);
+            }
             rooms.removeIf(r -> r.getId() == minibossRoomId);
             rooms.add(minibossRoom);
         }

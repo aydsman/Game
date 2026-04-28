@@ -10,6 +10,7 @@ public class Dagger extends Melee {
         damage = 12;
         range = 30.0; // 30 pixel range
         knockback = 1.0;
+        name = "Dagger";
     }
 
     public Dagger(int tier) {
@@ -19,5 +20,9 @@ public class Dagger extends Melee {
         damage = 12;
         range = 30.0; // 30 pixel range
         knockback = 1.0;
+        name = "Dagger";
+
+        // Apply tier multipliers after setting base stats
+        applyTierMultipliers();
     }
 }

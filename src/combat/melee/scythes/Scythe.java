@@ -10,6 +10,7 @@ public class Scythe extends Melee {
         damage = 35;
         range = 80.0; // 80 pixel range
         knockback = 8.0;
+        name = "Scythe";
     }
 
     public Scythe(int tier) {
@@ -19,5 +20,9 @@ public class Scythe extends Melee {
         damage = 35;
         range = 80.0; // 80 pixel range
         knockback = 8.0;
+        name = "Scythe";
+
+        // Apply tier multipliers after setting base stats
+        applyTierMultipliers();
     }
 }

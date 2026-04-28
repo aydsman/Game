@@ -10,6 +10,7 @@ public class Hammer extends Melee {
         damage = 40;
         range = 50.0; // 50 pixel range
         knockback = 15.0;
+        name = "Hammer";
     }
 
     public Hammer(int tier) {
@@ -19,5 +20,9 @@ public class Hammer extends Melee {
         damage = 40;
         range = 50.0; // 50 pixel range
         knockback = 15.0;
+        name = "Hammer";
+
+        // Apply tier multipliers after setting base stats
+        applyTierMultipliers();
     }
 }

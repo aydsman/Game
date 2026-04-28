@@ -9,6 +9,7 @@ public class Pistol extends Ranged {
         fireRate = 0.3; // seconds between shots
         damage = 1;
         accuracy = 0.95;
+        accuracyAngle = 15.0; // ±15 degrees spread
         magazineSize = 12;
         reloadTime = 1.5;
         currentAmmo = magazineSize;
@@ -25,8 +26,9 @@ public class Pistol extends Ranged {
         super(tier);
         // base pistol stats: fast fire rate, low damage, high accuracy
         fireRate = 0.3; // seconds between shots
-        damage = 1;
-        accuracy = 0.95;
+        damage = 10;
+        accuracy = 0.85;
+        accuracyAngle = 15.0; // ±15 degrees spread
         magazineSize = 12;
         reloadTime = 1.5;
         currentAmmo = magazineSize;
@@ -37,5 +39,8 @@ public class Pistol extends Ranged {
         barrelHeight = 14; // vertical height (7 above, 7 below center)
         name = "Pistol";
         automatic = false;
+
+        // Apply tier multipliers after setting base stats
+        applyTierMultipliers();
     }
 }

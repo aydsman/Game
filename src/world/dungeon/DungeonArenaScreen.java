@@ -2,12 +2,16 @@ package world.dungeon;
 
 import entity.Player;
 import world.DungeonArena;
+import world.chests.ArenaChest;
+import world.chests.Chest;
 import util.Camera;
 import util.KeyHandler;
 import util.MouseHandler;
 import ui.HUD;
+import ui.ChestUI;
 import java.awt.Color;
 import java.awt.Graphics2D;
+import java.util.ArrayList;
 
 public class DungeonArenaScreen {
 
@@ -17,19 +21,32 @@ public class DungeonArenaScreen {
     private DungeonGenerator generator;
     private int currentLevel;
     private HUD hud;
+    private ChestUI chestUI;
     private double targetCameraX;
     private double targetCameraY;
     private static final double CAMERA_LERP_SPEED = 0.1;
     private long lastShotTime = 0;
     private boolean canShoot = false;
     private boolean lPressedLastFrame = false;
+    private boolean ePressedLastFrame = false;
+    private ArrayList<Chest> chests;
+    private Chest activeChest;
+    private combat.Item draggedItem;
+    private int dragSource;
+    private int dragSourceSlot;
 
     public DungeonArenaScreen() {
         this.generator = new DungeonGenerator();
         this.currentLevel = 1;
         this.camera = new Camera();
         this.hud = new HUD();
+        this.chestUI = new ChestUI();
         this.lastShotTime = System.currentTimeMillis();
+        this.chests = new ArrayList<>();
+        this.activeChest = null;
+        this.draggedItem = null;
+        this.dragSource = -1;
+        this.dragSourceSlot = -1;
         generateLevel();
     }
 
@@ -49,6 +66,11 @@ public class DungeonArenaScreen {
         if (player.getHeldWeapon() == null) {
             player.equipHotbarSlot(0);
         }
+
+        // Clear and spawn test chests
+        chests.clear();
+        // Add a test chest at fixed visible location
+        chests.add(new ArenaChest(800, 450, 1));
     }
 
     public void update(KeyHandler key, MouseHandler mouse, int screenWidth, int screenHeight) {
@@ -69,6 +91,33 @@ public class DungeonArenaScreen {
             generateLevel();
         }
         lPressedLastFrame = key.lPressed;
+
+        // Handle chest interaction with E key
+        if (key.ePressed && !ePressedLastFrame) {
+            Chest closestChest = findClosestChestInRange();
+            if (closestChest != null) {
+                if (activeChest == closestChest) {
+                    activeChest.setOpen(false);
+                    activeChest = null;
+                } else {
+                    if (activeChest != null) {
+                        activeChest.setOpen(false);
+                    }
+                    activeChest = closestChest;
+                    activeChest.setOpen(true);
+                }
+            } else if (activeChest != null) {
+                activeChest.setOpen(false);
+                activeChest = null;
+            }
+        }
+        ePressedLastFrame = key.ePressed;
+
+        // Update chest range status and auto-close if out of range
+        updateChestRanges();
+
+        // Handle mouse drag and drop for chest/inventory
+        handleDragAndDrop(mouse, screenWidth, screenHeight);
 
         // Calculate intended movement
         int newX = player.getX();
@@ -225,9 +274,9 @@ public class DungeonArenaScreen {
         int overlapHeight = overlapBottom - overlapTop;
         int overlapArea = overlapWidth * overlapHeight;
 
-        // Require at least 75% overlap to allow transition
+        // Require at least 25% overlap to allow transition (more lenient for dead ends)
         int playerArea = player.getW() * player.getL();
-        return overlapArea >= playerArea * 0.75;
+        return overlapArea >= playerArea * 0.25;
     }
 
     private boolean overlapsWithRoom(int x, int y, Room room) {
@@ -241,9 +290,9 @@ public class DungeonArenaScreen {
         int overlapHeight = overlapBottom - overlapTop;
         int overlapArea = overlapWidth * overlapHeight;
 
-        // Require at least 75% overlap to allow transition
+        // Require at least 25% overlap to allow transition (more lenient for dead ends)
         int playerArea = player.getW() * player.getL();
-        return overlapArea >= playerArea * 0.75;
+        return overlapArea >= playerArea * 0.25;
     }
 
     private void updateCamera(int screenWidth, int screenHeight) {
@@ -302,9 +351,144 @@ public class DungeonArenaScreen {
         return null;
     }
 
+    private Chest findClosestChestInRange() {
+        Chest closest = null;
+        double closestDistance = Double.MAX_VALUE;
+
+        for (Chest chest : chests) {
+            double distance = getDistanceToChest(chest);
+            if (distance <= chest.getInteractionRadius() && distance < closestDistance) {
+                closest = chest;
+                closestDistance = distance;
+            }
+        }
+        return closest;
+    }
+
+    private double getDistanceToChest(Chest chest) {
+        double dx = player.getCenterX() - chest.getX();
+        double dy = player.getCenterY() - chest.getY();
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    private void updateChestRanges() {
+        for (Chest chest : chests) {
+            double distance = getDistanceToChest(chest);
+            chest.setInRange(distance <= chest.getInteractionRadius());
+
+            // Auto-close if player moves out of range
+            if (activeChest == chest && !chest.isInRange()) {
+                chest.setOpen(false);
+                activeChest = null;
+            }
+        }
+    }
+
+    private void handleDragAndDrop(MouseHandler mouse, int screenWidth, int screenHeight) {
+        // Cancel drag if chest is closed or player out of range
+        if (activeChest == null || !activeChest.isOpen() || !activeChest.isInRange()) {
+            draggedItem = null;
+            dragSource = -1;
+            dragSourceSlot = -1;
+            return;
+        }
+
+        // Mouse press - start drag
+        if (mouse.leftPressed && draggedItem == null) {
+            // Check if clicking on inventory slot
+            int inventorySlot = getInventorySlotAtPosition(mouse.mouseX, mouse.mouseY, screenWidth, screenHeight);
+            if (inventorySlot >= 0 && inventorySlot < player.getHotbar().size()) {
+                Object item = player.getHotbar().get(inventorySlot);
+                if (item instanceof combat.Item) {
+                    draggedItem = (combat.Item) item;
+                    dragSource = -1;
+                    dragSourceSlot = inventorySlot;
+                }
+            }
+
+            // Check if clicking on chest slot
+            if (draggedItem == null) {
+                int chestSlot = chestUI.getSlotAtPosition(mouse.mouseX, mouse.mouseY, activeChest, activeChest.getX() - (int)camera.x, activeChest.getY() - (int)camera.y);
+                if (chestSlot >= 0) {
+                    draggedItem = activeChest.getItem(chestSlot);
+                    if (draggedItem != null) {
+                        dragSource = 0;
+                        dragSourceSlot = chestSlot;
+                    }
+                }
+            }
+        }
+
+        // Mouse release - end drag
+        if (!mouse.leftPressed && draggedItem != null) {
+            // Check if dropping on inventory slot
+            int inventorySlot = getInventorySlotAtPosition(mouse.mouseX, mouse.mouseY, screenWidth, screenHeight);
+            if (inventorySlot >= 0 && inventorySlot < player.getHotbar().size()) {
+                if (dragSource == 0) {
+                    // Moving from chest to inventory
+                    Object destItem = player.getHotbar().get(inventorySlot);
+                    if (destItem == null) {
+                        // Empty slot - move item
+                        player.getHotbar().set(inventorySlot, draggedItem);
+                        activeChest.setItem(dragSourceSlot, null);
+                    } else if (destItem instanceof combat.Item) {
+                        // Occupied slot - swap items
+                        activeChest.setItem(dragSourceSlot, (combat.Item) destItem);
+                        player.getHotbar().set(inventorySlot, draggedItem);
+                    }
+                }
+            }
+
+            // Check if dropping on chest slot
+            int chestSlot = chestUI.getSlotAtPosition(mouse.mouseX, mouse.mouseY, activeChest, activeChest.getX() - (int)camera.x, activeChest.getY() - (int)camera.y);
+            if (chestSlot >= 0) {
+                if (dragSource == -1) {
+                    // Moving from inventory to chest
+                    combat.Item destItem = activeChest.getItem(chestSlot);
+                    if (destItem == null) {
+                        // Empty slot - move item
+                        activeChest.setItem(chestSlot, draggedItem);
+                        player.getHotbar().set(dragSourceSlot, null);
+                    } else {
+                        // Occupied slot - swap items
+                        player.getHotbar().set(dragSourceSlot, destItem);
+                        activeChest.setItem(chestSlot, draggedItem);
+                    }
+                }
+            }
+
+            // Clear drag state
+            draggedItem = null;
+            dragSource = -1;
+            dragSourceSlot = -1;
+        }
+    }
+
+    private int getInventorySlotAtPosition(int mouseX, int mouseY, int screenWidth, int screenHeight) {
+        int slotSize = 50;
+        int slotSpacing = 5;
+        int totalWidth = (slotSize * 5) + (slotSpacing * 4);
+        int startX = (screenWidth - totalWidth) / 2;
+        int startY = screenHeight - slotSize - 20;
+
+        for (int i = 0; i < 5; i++) {
+            int slotX = startX + (i * (slotSize + slotSpacing));
+            if (mouseX >= slotX && mouseX <= slotX + slotSize &&
+                mouseY >= startY && mouseY <= startY + slotSize) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
     public void draw(Graphics2D g, int screenWidth, int screenHeight) {
         // Draw arena (rooms and hallways)
         arena.draw(g, screenWidth, screenHeight, camera.x, camera.y);
+
+        // Draw chests
+        for (Chest chest : chests) {
+            drawChest(g, chest);
+        }
 
         // Draw player
         player.draw(g, camera.x, camera.y);
@@ -314,6 +498,11 @@ public class DungeonArenaScreen {
             g.setColor(p.getColor());
             int radius = p.getRadius();
             g.fillOval(p.getX() - camera.x - radius, p.getY() - camera.y - radius, radius * 2, radius * 2);
+        }
+
+        // Draw chest UI if active
+        if (activeChest != null && activeChest.isOpen()) {
+            chestUI.draw(g, activeChest, activeChest.getX() - (int)camera.x, activeChest.getY() - (int)camera.y, screenWidth, screenHeight);
         }
 
         // Draw HUD (hotbar, HP, XP)
@@ -330,6 +519,29 @@ public class DungeonArenaScreen {
         String advanceText = "Press L to advance";
         int advanceWidth = g.getFontMetrics().stringWidth(advanceText);
         g.drawString(advanceText, screenWidth - advanceWidth - 20, 60);
+    }
+
+    private void drawChest(Graphics2D g, Chest chest) {
+        int chestX = chest.getX() - (int)camera.x;
+        int chestY = chest.getY() - (int)camera.y;
+
+        // Draw chest (larger bright orange box for visibility)
+        g.setColor(Color.ORANGE);
+        g.fillRect(chestX - 25, chestY - 25, 50, 50);
+
+        // Draw debug radius circle (always visible for testing)
+        g.setColor(Color.RED);
+        g.drawOval(chestX - chest.getInteractionRadius(), chestY - chest.getInteractionRadius(),
+                   chest.getInteractionRadius() * 2, chest.getInteractionRadius() * 2);
+
+        // Draw E button if in range
+        if (chest.isInRange()) {
+            g.setColor(Color.WHITE);
+            g.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 16));
+            String eText = "E";
+            int eWidth = g.getFontMetrics().stringWidth(eText);
+            g.drawString(eText, chestX - eWidth / 2, chestY - 35);
+        }
     }
 
     public void resetMouseClicks(MouseHandler mouse) {

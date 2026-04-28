@@ -12,5 +12,6 @@ public class SMG1 extends SMG {
         damage = 2;
         magazineSize = 20;
         fireRate = 0.1;
+        name = "SMG1";
     }
 }

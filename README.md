@@ -4,8 +4,8 @@ A Java-based 2D action game featuring dungeon crawling, arena combat, and progre
 
 ## Project Stats
 
-- **Total Classes:** 52
-- **Total Lines of Code:** 3,041
+- **Total Classes:** 58
+- **Total Lines of Code:** 4,323
 
 ## Features
 
@@ -15,6 +15,8 @@ A Java-based 2D action game featuring dungeon crawling, arena combat, and progre
 - Weapon rarity tiers (I-V)
 - Fire rate, damage, accuracy, and reload mechanics
 - Projectile-based combat
+- Accuracy angle spread for ranged weapons
+- Shotgun pellet system (multiple pellets per shot)
 
 ### Entity System
 - Player with leveling and XP progression
@@ -35,11 +37,15 @@ A Java-based 2D action game featuring dungeon crawling, arena combat, and progre
 - Game screen with HUD (HP, XP, hotbar)
 - Pause, Settings, Help, and Customize screens
 - Inventory system with hotbar slots
+- Item Gallery screen with tier cycling (scroll wheel)
+- Chest UI for loot display
 
 ### Progression
 - XP-based leveling system
 - Stat multipliers (damage, speed, HP)
 - Weapon tiers with scaling stats
+- Item registry with loot tables for chests
+- Multiple item types: Weapons, Charms, Summons, Powers, Consumables
 
 ## Controls
 
@@ -59,6 +65,7 @@ src/
 ├── Main.java              # Entry point
 ├── combat/                # Combat items
 │   ├── Item.java          # Base class
+│   ├── ItemRegistry.java  # Item registry with loot tables
 │   ├── Ranged.java        # Ranged weapons
 │   ├── Melee.java         # Melee weapons
 │   ├── Projectile.java    # Projectiles
@@ -68,12 +75,16 @@ src/
 │   │   ├── shotguns/
 │   │   ├── smgs/
 │   │   └── snipers/
-│   └── melee/             # Melee weapon types
-│       ├── swords/
-│       ├── hammers/
-│       ├── daggers/
-│       ├── maces/
-│       └── scythes/
+│   ├── melee/             # Melee weapon types
+│   │   ├── swords/
+│   │   ├── hammers/
+│   │   ├── daggers/
+│   │   ├── maces/
+│   │   └── scythes/
+│   ├── charms/            # Charm items
+│   ├── summons/           # Summon items
+│   ├── powers/            # Power items
+│   └── consumables/       # Consumable items
 ├── entity/                # Game entities
 │   ├── Entity.java        # Base class
 │   ├── Player.java
@@ -91,6 +102,7 @@ src/
 │   ├── GamePanel.java
 │   ├── HUD.java
 │   ├── InventoryUI.java
+│   ├── ChestUI.java
 │   └── screens/           # Game screens
 │       ├── MenuScreen.java
 │       ├── GameScreen.java
@@ -98,6 +110,7 @@ src/
 │       ├── CustomizeScreen.java
 │       ├── SettingsScreen.java
 │       ├── HelpScreen.java
+│       ├── ItemGalleryScreen.java
 │       └── GraphTestScreen.java
 ├── util/                  # Utilities
 │   ├── Camera.java

@@ -12,5 +12,6 @@ public class Shotgun1 extends Shotgun {
         damage = 3;
         magazineSize = 6;
         pelletCount = 6;
+        name = "Shotgun1";
     }
 }

@@ -17,6 +17,7 @@ public class MenuScreen {
     private Rectangle settingsBtn  = new Rectangle(680, 360, 240, 50);
     private Rectangle helpBtn      = new Rectangle(680, 440, 240, 50);
     private Rectangle graphTestBtn = new Rectangle(10, 850, 140, 30);
+    private Rectangle itemsBtn     = new Rectangle(160, 850, 140, 30);
 
     public MenuScreen(GamePanel gamePanel) {
         this.gamePanel = gamePanel;
@@ -29,6 +30,7 @@ public class MenuScreen {
         if (settingsBtn.contains(x, y))  gamePanel.switchScreen("settings");
         if (helpBtn.contains(x, y))      gamePanel.switchScreen("help");
         if (graphTestBtn.contains(x, y)) gamePanel.switchScreen("graphtest");
+        if (itemsBtn.contains(x, y))       gamePanel.switchScreen("items");
     }
 
     public void draw(Graphics2D g) {
@@ -58,6 +60,17 @@ public class MenuScreen {
         int btnTextX = graphTestBtn.x + (graphTestBtn.width - btnFm.stringWidth(btnText)) / 2;
         int btnTextY = graphTestBtn.y + (graphTestBtn.height + btnFm.getAscent() - btnFm.getDescent()) / 2;
         g.drawString(btnText, btnTextX, btnTextY);
+
+        // Draw Items button (next to Graph Test)
+        g.setColor(new Color(70, 70, 70));
+        g.fill(itemsBtn);
+        g.setColor(Color.WHITE);
+        g.draw(itemsBtn);
+        g.setFont(new Font("Arial", Font.PLAIN, 12));
+        String itemsText = "Items";
+        int itemsTextX = itemsBtn.x + (itemsBtn.width - btnFm.stringWidth(itemsText)) / 2;
+        int itemsTextY = itemsBtn.y + (itemsBtn.height + btnFm.getAscent() - btnFm.getDescent()) / 2;
+        g.drawString(itemsText, itemsTextX, itemsTextY);
     }
 
     private void drawButton(Graphics2D g, Rectangle btn, String label) {

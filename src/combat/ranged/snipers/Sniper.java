@@ -9,6 +9,7 @@ public class Sniper extends Ranged {
         fireRate = 1.2; // seconds between shots (very slow)
         damage = 7;
         accuracy = 0.98;
+        accuracyAngle = 5.0; // ±5 degrees spread (very accurate)
         magazineSize = 5;
         reloadTime = 3.0;
         currentAmmo = magazineSize;
@@ -27,6 +28,7 @@ public class Sniper extends Ranged {
         fireRate = 1.2; // seconds between shots (very slow)
         damage = 7;
         accuracy = 0.98;
+        accuracyAngle = 5.0; // ±5 degrees spread (very accurate)
         magazineSize = 5;
         reloadTime = 3.0;
         currentAmmo = magazineSize;

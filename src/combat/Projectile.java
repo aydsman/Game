@@ -31,6 +31,16 @@ public class Projectile {
         this.radius = 6;
     }
 
+    public Projectile(int x, int y, Color color, double speed, double angle, int damage, int radius) {
+        this.x = x;
+        this.y = y;
+        this.color = color;
+        this.speed = speed;
+        this.angle = angle;
+        this.damage = damage;
+        this.radius = radius;
+    }
+
     public void update() {
         x += speed * Math.cos(angle);
         y += speed * Math.sin(angle);

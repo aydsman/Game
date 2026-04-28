@@ -1,8 +1,8 @@
 # SummerGame Class Documentation
 
-**Total Classes:** 52
+**Total Classes:** 58
 
-**Total Lines of Code:** 3,041
+**Total Lines of Code:** 4,323
 
 ## Table of Contents
 
@@ -10,9 +10,22 @@
   - [Main.java](#mainjava)
 - [combat/](#combat)
   - [Item.java](#itemjava-base-class)
+  - [ItemRegistry.java](#itemregistryjava)
   - [Melee.java](#meleejava-extends-item)
   - [Ranged.java](#rangedjava-extends-item)
   - [Projectile.java](#projectilejava)
+  - [charms/](#charms)
+    - [Charm.java](#charmjava-extends-item)
+    - [Charm1.java](#charm1java-extends-charm)
+  - [summons/](#summons)
+    - [Summon.java](#summonjava-extends-item)
+    - [Summon1.java](#summon1java-extends-summon)
+  - [powers/](#powers)
+    - [Power.java](#powerjava-extends-item)
+    - [Power1.java](#power1java-extends-power)
+  - [consumables/](#consumables)
+    - [Consumable.java](#consumablejava-extends-item)
+    - [Consumable1.java](#consumable1java-extends-consumable)
 - [combat/melee/](#combatmelee)
   - [daggers/](#daggers)
     - [Dagger.java](#daggerjava-extends-melee)
@@ -75,6 +88,8 @@
   - [CustomizeScreen.java](#customizescreenjava)
   - [SettingsScreen.java](#settingsscreenjava)
   - [HelpScreen.java](#helpscreenjava)
+  - [ItemGalleryScreen.java](#itemgalleryscreenjava)
+  - [GraphTestScreen.java](#graphtestscreenjava)
 - [util/](#util)
   - [Camera.java](#camerajava)
   - [KeyHandler.java](#keyhandlerjava-implements-keylistener)
@@ -112,6 +127,28 @@
 - `setName(String name)` - Sets name
 - `setDescription(String description)` - Sets description
 
+### ItemRegistry.java
+**Fields:**
+- `allItems` (List<Item>) - All registered items
+- `weapons` (List<Item>) - Weapon items
+- `charms` (List<Item>) - Charm items
+- `summons` (List<Item>) - Summon items
+- `powers` (List<Item>) - Power items
+- `consumables` (List<Item>) - Consumable items
+- `LOOT_TABLE` (double[][]) - Chest tier probabilities
+
+**Methods:**
+- `ItemRegistry()` - Constructor, registers all items
+- `getAllItems()` - Returns all items
+- `getWeapons()` - Returns weapons list
+- `getCharms()` - Returns charms list
+- `getSummons()` - Returns summons list
+- `getPowers()` - Returns powers list
+- `getConsumables()` - Returns consumables list
+- `getItemsByTier(int tier)` - Returns items of specific tier
+- `getRandomItem()` - Returns random item
+- `getRandomItemForChest(int chestTier)` - Returns random item based on chest tier loot table
+
 ### Melee.java (extends Item)
 **Fields:**
 - `attackSpeed` (double) - attacks per second
@@ -129,6 +166,7 @@
 - `fireRate` (double) - seconds between shots
 - `damage` (int) - damage per shot
 - `accuracy` (double) - 0.0 to 1.0 (100%)
+- `accuracyAngle` (double) - degrees of spread for accuracy
 - `magazineSize` (int) - bullets per magazine
 - `reloadTime` (double) - seconds to reload
 - `currentAmmo` (int) - current ammo in magazine
@@ -144,7 +182,7 @@
 - `Ranged()` - Default constructor with base stats
 - `Ranged(int tier)` - Constructor with tier and multipliers
 - `getBarrelTip(int centerX, int centerY, double barrelAngle)` - Returns barrel tip position
-- `shoot(int centerX, int centerY, double barrelAngle)` - Creates and returns Projectile
+- `shoot(int centerX, int centerY, double barrelAngle)` - Creates and returns List<Projectile>
 - `reload()` - Starts reload
 - `updateReload()` - Updates reload state
 - `getBarrelColor()` - Returns barrel color
@@ -156,6 +194,7 @@
 - `getMagazineSize()` - Returns magazine size
 - `isAutomatic()` - Returns automatic status
 - `isReloading()` - Returns reloading status
+- `getAccuracyAngle()` - Returns accuracy angle
 
 ### Projectile.java
 **Fields:**
@@ -165,10 +204,12 @@
 - `speed` (double)
 - `angle` (double)
 - `damage` (int)
+- `radius` (int)
 
 **Methods:**
 - `Projectile(int x, int y, Color color, double speed)` - Constructor
 - `Projectile(int x, int y, Color color, double speed, double angle, int damage)` - Full constructor
+- `Projectile(int x, int y, Color color, double speed, double angle, int damage, int radius)` - Constructor with radius
 - `update()` - Updates position based on speed and angle
 - `getX()` - Returns x
 - `getY()` - Returns y
@@ -177,6 +218,54 @@
 - `getAngle()` - Returns angle
 - `getDamage()` - Returns damage
 - `setAngle(double angle)` - Sets angle
+
+---
+
+## combat/charms/
+
+### Charm.java (extends Item)
+- `Charm()` - Default constructor
+- `Charm(int tier)` - Constructor with tier
+
+### Charm1.java (extends Charm)
+- `Charm1()` - Tier I charm
+- `Charm1(int tier)` - Constructor with tier
+
+---
+
+## combat/summons/
+
+### Summon.java (extends Item)
+- `Summon()` - Default constructor
+- `Summon(int tier)` - Constructor with tier
+
+### Summon1.java (extends Summon)
+- `Summon1()` - Tier I summon
+- `Summon1(int tier)` - Constructor with tier
+
+---
+
+## combat/powers/
+
+### Power.java (extends Item)
+- `Power()` - Default constructor
+- `Power(int tier)` - Constructor with tier
+
+### Power1.java (extends Power)
+- `Power1()` - Tier I power
+- `Power1(int tier)` - Constructor with tier
+
+---
+
+## combat/consumables/
+
+### Consumable.java (extends Item)
+- `Consumable()` - Default constructor
+- `Consumable(int tier)` - Constructor with tier
+
+### Consumable1.java (extends Consumable)
+- `Consumable1()` - Tier I consumable
+- `Consumable1(int tier)` - Constructor with tier
 
 ---
 
@@ -495,6 +584,20 @@
 - `setSelectedSlot(int slot)` - Sets selected slot
 - `getSelectedSlot()` - Returns selected slot
 
+### ChestUI.java
+**Fields:**
+- `lootItems` (List<Item>) - Items in chest
+- `selectedItem` (Item) - Currently selected item
+- `isOpen` (boolean) - Chest open state
+
+**Methods:**
+- `ChestUI()` - Constructor
+- `openChest(int chestTier)` - Opens chest with loot based on tier
+- `draw(Graphics2D g, int screenWidth, int screenHeight)` - Draws chest UI
+- `handleClick(int x, int y)` - Handles clicks
+- `getSelectedItem()` - Returns selected item
+- `closeChest()` - Closes chest
+
 ---
 
 ## ui/screens/
@@ -546,6 +649,34 @@
 - `HelpScreen(GamePanel gamePanel)` - Constructor
 - `handleClick(int x, int y)` - Handles clicks
 - `draw(Graphics2D g)` - Draws help screen
+
+### ItemGalleryScreen.java
+**Fields:**
+- `gamePanel` (GamePanel)
+- `itemRegistry` (ItemRegistry)
+- `backBtn` (Rectangle)
+- `selectedItem` (Item)
+- `itemTypes` (String[]) - Array of item type names
+- `typeButtons` (Rectangle[]) - Type selector buttons
+- `selectedType` (int) - Currently selected item type
+
+**Methods:**
+- `ItemGalleryScreen(GamePanel gamePanel)` - Constructor
+- `handleMouseScroll(int scrollDirection)` - Handles mouse scroll for tier cycling
+- `cycleTier(int direction)` - Cycles item tier (1-5)
+- `createItemWithTier(String itemName, int tier)` - Creates item instance with specific tier
+- `draw(Graphics2D g)` - Draws item gallery screen
+- `drawItemGrid(Graphics2D g)` - Draws item grid
+- `getItemsForSelectedType()` - Returns items for selected type
+- `drawItemDetails(Graphics2D g)` - Draws selected item details panel
+- `getItemTypeName(Item item)` - Returns item type name
+- `handleClick(int x, int y)` - Handles clicks
+
+### GraphTestScreen.java
+**Methods:**
+- `GraphTestScreen(GamePanel gamePanel)` - Constructor
+- `handleClick(int x, int y)` - Handles clicks
+- `draw(Graphics2D g)` - Draws graph test screen
 
 ---
 

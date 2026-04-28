@@ -11,5 +11,6 @@ public class Hammer1 extends Hammer {
         // Hammer1 specific stats (basic starter hammer)
         damage = 35;
         attackSpeed = 0.7;
+        name = "Hammer1";
     }
 }

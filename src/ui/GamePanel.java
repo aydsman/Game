@@ -7,6 +7,7 @@ import ui.screens.SettingsScreen;
 import ui.screens.CustomizeScreen;
 import ui.screens.HelpScreen;
 import ui.screens.GraphTestScreen;
+import ui.screens.ItemGalleryScreen;
 import world.dungeon.DungeonArenaScreen;
 import util.KeyHandler;
 import util.MouseHandler;
@@ -36,7 +37,8 @@ public class GamePanel extends JPanel implements Runnable {
     CustomizeScreen customizeScreen;
     SettingsScreen settingsScreen;
     HelpScreen helpScreen;
-    GraphTestScreen graphTestScreen = new GraphTestScreen();
+    GraphTestScreen graphTestScreen = new GraphTestScreen(this);
+    ItemGalleryScreen itemGalleryScreen = new ItemGalleryScreen(this);
     DungeonArenaScreen dungeonArenaScreen = new DungeonArenaScreen();
 
     // screen states
@@ -47,6 +49,7 @@ public class GamePanel extends JPanel implements Runnable {
     boolean showSettings = false;
     boolean showHelp = false;
     boolean showGraphTest = false;
+    boolean showItems = false;
     boolean showDungeonArena = false;
 
     Thread gameThread;
@@ -64,13 +67,19 @@ public class GamePanel extends JPanel implements Runnable {
         addMouseWheelListener(mouseHandler);
         addMouseListener(new MouseAdapter() {
             @Override
-            public void mouseClicked(MouseEvent e) {
+            public void mousePressed(MouseEvent e) {
                 if (showMenu) menuScreen.handleClick(e.getX(), e.getY());
                 if (showDungeonArena) dungeonArenaScreen.resetMouseClicks(mouseHandler);
                 if (showCustomize) customizeScreen.handleClick(e.getX(), e.getY());
                 if (showSettings) settingsScreen.handleClick(e.getX(), e.getY());
                 if (showHelp) helpScreen.handleClick(e.getX(), e.getY());
+                if (showGraphTest) graphTestScreen.handleClick(e.getX(), e.getY());
+                if (showItems) itemGalleryScreen.handleClick(e.getX(), e.getY());
             }
+        });
+
+        addMouseWheelListener(e -> {
+            if (showItems) itemGalleryScreen.handleMouseScroll(e.getWheelRotation());
         });
         setFocusable(true);
         gameThread = new Thread(this);
@@ -85,6 +94,7 @@ public class GamePanel extends JPanel implements Runnable {
         showSettings = false;
         showHelp = false;
         showGraphTest = false;
+        showItems = false;
         showDungeonArena = false;
 
         switch (screen) {
@@ -95,6 +105,7 @@ public class GamePanel extends JPanel implements Runnable {
             case "settings"  -> showSettings = true;
             case "help"      -> showHelp = true;
             case "graphtest" -> showGraphTest = true;
+            case "items"     -> showItems = true;
             case "dungeon"   -> showDungeonArena = true;
         }
     }
@@ -161,6 +172,7 @@ public class GamePanel extends JPanel implements Runnable {
         if (showSettings)     settingsScreen.draw(g2);
         if (showHelp)         helpScreen.draw(g2);
         if (showGraphTest)    graphTestScreen.draw(g2);
+        if (showItems)        itemGalleryScreen.draw(g2);
         if (showDungeonArena) dungeonArenaScreen.draw(g2, SCREEN_WIDTH, SCREEN_HEIGHT);
     }
 }

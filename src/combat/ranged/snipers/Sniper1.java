@@ -12,5 +12,6 @@ public class Sniper1 extends Sniper {
         damage = 7;
         magazineSize = 5;
         fireRate = 1.5;
+        name = "Sniper1";
     }
 }

@@ -11,5 +11,6 @@ public class Sword1 extends Sword {
         // Sword1 specific stats (basic starter sword)
         damage = 18;
         attackSpeed = 1.0;
+        name = "Sword1";
     }
 }

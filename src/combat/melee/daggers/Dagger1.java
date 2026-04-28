@@ -11,5 +11,6 @@ public class Dagger1 extends Dagger {
         // Dagger1 specific stats (basic starter dagger)
         damage = 10;
         attackSpeed = 2.0;
+        name = "Dagger1";
     }
 }

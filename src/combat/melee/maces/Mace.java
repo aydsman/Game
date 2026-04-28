@@ -10,6 +10,7 @@ public class Mace extends Melee {
         damage = 30;
         range = 45.0; // 45 pixel range
         knockback = 12.0;
+        name = "Mace";
     }
 
     public Mace(int tier) {
@@ -19,5 +20,9 @@ public class Mace extends Melee {
         damage = 30;
         range = 45.0; // 45 pixel range
         knockback = 12.0;
+        name = "Mace";
+
+        // Apply tier multipliers after setting base stats
+        applyTierMultipliers();
     }
 }

@@ -11,5 +11,6 @@ public class Rifle1 extends Rifle {
         // Rifle1 specific stats (basic assault rifle)
         damage = 3;
         magazineSize = 25;
+        name = "Rifle1";
     }
 }

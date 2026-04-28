@@ -40,11 +40,13 @@ Progression-based action game with open world exploration, dungeon crawling, tow
 - ❌ Stat points to allocate (HP, damage, speed, etc.)
 
 ### Gear Progression
-- ❌ Weapons drop from enemies/chests
+- ✅ Weapons drop from enemies/chests
 - ✅ Rarity tiers: Tier I → Tier II → Tier III → Tier IV → Tier V
 - ✅ Each tier has better base stats
 - ❌ Weapons can be upgraded at blacksmith
-- ✅ Item class hierarchy: Item (base) → Ranged, Melee, Charm (future)
+- ✅ Item class hierarchy: Item (base) → Ranged, Melee, Charm, Summon, Power, Consumable
+- ✅ ItemRegistry with loot tables for chest generation
+- ✅ Item Gallery screen to view all items by type and tier
 
 ### Skill Tree Structure
 Three main branches:
