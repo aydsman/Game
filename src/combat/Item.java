@@ -1,6 +1,6 @@
 package combat;
 
-public class Item {
+public class Item implements Cloneable {
 
     protected String name;
     protected int tier; // 1-5 (I-V)
@@ -47,7 +47,21 @@ public class Item {
     public String getRarity() { return rarity; }
     public String getDescription() { return description; }
 
+    // Barrel-related methods (default values, can be overridden)
+    public int getBarrelLength() { return 20; }
+    public int getBarrelHeight() { return 8; }
+    public String getBarrelColor() { return "gray"; }
+
     // Setters
     public void setName(String name) { this.name = name; }
     public void setDescription(String description) { this.description = description; }
+
+    // Clone method for creating item copies
+    public Item clone() {
+        try {
+            return (Item) super.clone();
+        } catch (CloneNotSupportedException e) {
+            return null;
+        }
+    }
 }

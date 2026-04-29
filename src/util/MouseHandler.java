@@ -11,6 +11,8 @@ public class MouseHandler implements MouseListener, MouseMotionListener, MouseWh
     public int mouseY = 0;
     public boolean leftPressed = false;
     public boolean leftClicked = false;
+    public boolean rightPressed = false;
+    public boolean rightClicked = false;
     public int scrollDirection = 0; // 1 for scroll down, -1 for scroll up, 0 for no scroll
 
     @Override
@@ -36,12 +38,19 @@ public class MouseHandler implements MouseListener, MouseMotionListener, MouseWh
             leftPressed = true;
             leftClicked = true;
         }
+        if (e.getButton() == MouseEvent.BUTTON3) {
+            rightPressed = true;
+            rightClicked = true;
+        }
     }
 
     @Override
     public void mouseReleased(MouseEvent e) {
         if (e.getButton() == MouseEvent.BUTTON1) {
             leftPressed = false;
+        }
+        if (e.getButton() == MouseEvent.BUTTON3) {
+            rightPressed = false;
         }
     }
 

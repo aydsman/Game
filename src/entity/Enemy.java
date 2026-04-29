@@ -97,14 +97,17 @@ public class Enemy extends Entity {
     }
 
     public void shoot() {
-        if (heldWeapon != null && !heldWeapon.isReloading()) {
-            long currentTime = System.currentTimeMillis();
-            long fireRateMs = (long) (heldWeapon.getFireRate() * 1000);
-            if (currentTime - lastShotTime >= fireRateMs) {
-                List<Projectile> bullets = heldWeapon.shoot(getCenterX(), getCenterY(), barrelAngle);
-                if (bullets != null) {
-                    projectiles.addAll(bullets);
-                    lastShotTime = currentTime;
+        if (heldWeapon instanceof combat.Ranged) {
+            combat.Ranged ranged = (combat.Ranged) heldWeapon;
+            if (!ranged.isReloading()) {
+                long currentTime = System.currentTimeMillis();
+                long fireRateMs = (long) (ranged.getFireRate() * 1000);
+                if (currentTime - lastShotTime >= fireRateMs) {
+                    List<Projectile> bullets = ranged.shoot(getCenterX(), getCenterY(), barrelAngle);
+                    if (bullets != null) {
+                        projectiles.addAll(bullets);
+                        lastShotTime = currentTime;
+                    }
                 }
             }
         }
@@ -119,11 +122,12 @@ public class Enemy extends Entity {
     }
 
     public void updateWeapon() {
-        if (heldWeapon != null) {
-            heldWeapon.updateReload();
+        if (heldWeapon instanceof combat.Ranged) {
+            combat.Ranged ranged = (combat.Ranged) heldWeapon;
+            ranged.updateReload();
             // Auto-reload when ammo is 0
-            if (heldWeapon.getCurrentAmmo() == 0 && !heldWeapon.isReloading()) {
-                heldWeapon.reload();
+            if (ranged.getCurrentAmmo() == 0 && !ranged.isReloading()) {
+                ranged.reload();
             }
         }
     }

@@ -2,6 +2,7 @@ package entity;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
+import combat.Item;
 import combat.Ranged;
 
 public class Entity {
@@ -13,11 +14,12 @@ public class Entity {
     public boolean ranged = false; // whether this entity uses ranged attacks
     protected double barrelAngle = 0; // angle the barrel is pointing (in radians)
     protected Color color = Color.WHITE; // default color
-    protected Ranged heldWeapon; // weapon the entity is holding (null if nothing)
+    protected Item heldWeapon; // weapon the entity is holding (null if nothing)
     protected boolean dead = false; // death status
     protected int level = 1; // entity level
     protected double currentXP = 0; // current experience points
     protected double maxXP = 100; // XP needed for next level
+    protected boolean debugMode = false; // debug mode for showing ranges
 
     public Entity(int x, int y) {
         this.x = x;
@@ -44,11 +46,20 @@ public class Entity {
         return px >= x && px <= x + w && py >= y && py <= y + l;
     }
 
+    public void takeDamage(double damageAmount) {
+        hp -= damageAmount;
+        checkDeath();
+    }
+
     public void checkDeath() {
         if (hp <= 0) {
             hp = 0; // Clamp health to 0
             dead = true;
         }
+    }
+
+    public void heal(double amount) {
+        hp = Math.min(maxHp, hp + amount);
     }
 
     public void gainXP(double amount) {
@@ -65,17 +76,17 @@ public class Entity {
     }
 
     // Weapon holding methods
-    public void setWeapon(Ranged weapon) {
+    public void setWeapon(Item weapon) {
         this.heldWeapon = weapon;
-        this.ranged = (weapon != null);
+        this.ranged = (weapon instanceof combat.Ranged);
     }
-    
-    public Ranged getHeldWeapon() {
+
+    public Item getHeldWeapon() {
         return heldWeapon;
     }
-    
+
     public void selectWeapon(String weaponType, int weaponId) {
-        Ranged weapon = switch(weaponType.toLowerCase()) {
+        Item weapon = switch(weaponType.toLowerCase()) {
             case "pistol" -> switch(weaponId) {
                 case 1 -> new combat.ranged.pistols.Pistol1();
                 default -> new combat.ranged.pistols.Pistol();
@@ -102,6 +113,8 @@ public class Entity {
         g.fillRect(x - cameraX, y - cameraY, w, l);
         if (ranged) {
             drawBarrel(g, cameraX, cameraY);
+        } else if (heldWeapon instanceof combat.Melee) {
+            drawMeleeWeapon(g, cameraX, cameraY);
         }
         displayStats(g, cameraX, cameraY);
     }
@@ -148,6 +161,47 @@ public class Entity {
 
         // restore transform
         g.setTransform(old);
+    }
+
+    private void drawMeleeWeapon(Graphics2D g, int cameraX, int cameraY) {
+        if (heldWeapon == null) {
+            return;
+        }
+
+        combat.Melee melee = (combat.Melee) heldWeapon;
+        int centerX = getCenterX() - cameraX;
+        int centerY = getCenterY() - cameraY;
+        int weaponLength = 30;
+        int weaponHeight = 8;
+        int handleOffset = 10; // Distance from center to handle start
+
+        // save original transform
+        java.awt.geom.AffineTransform old = g.getTransform();
+
+        // rotate around center
+        g.rotate(barrelAngle, centerX, centerY);
+
+        // Draw melee weapon (sword/hammer etc) - offset from center
+        g.setColor(Color.GRAY);
+        g.fillRect(centerX + handleOffset, centerY - weaponHeight / 2, weaponLength, weaponHeight);
+
+        // Draw handle
+        g.setColor(Color.DARK_GRAY);
+        g.fillRect(centerX + handleOffset - 5, centerY - weaponHeight / 2 - 2, 5, weaponHeight + 4);
+
+        // restore transform
+        g.setTransform(old);
+
+        // Draw range circle in debug mode
+        if (debugMode) {
+            double range = melee.getRange();
+            g.setColor(new Color(255, 255, 0, 100)); // Semi-transparent yellow
+            g.drawOval(centerX - (int)range, centerY - (int)range, (int)(range * 2), (int)(range * 2));
+        }
+    }
+
+    public void setDebugMode(boolean debugMode) {
+        this.debugMode = debugMode;
     }
 
     public void displayStats(Graphics2D g, int cameraX, int cameraY) {

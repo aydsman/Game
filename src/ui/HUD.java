@@ -44,10 +44,15 @@ public class HUD {
         if (player.getHeldWeapon() != null) {
             g.setFont(new Font("Arial", Font.BOLD, 20));
             g.drawString("Weapon: " + player.getHeldWeapon().getName(), 10, 90);
-            if (player.getHeldWeapon().isReloading()) {
-                g.drawString("Ammo: Reloading", 10, 115);
-            } else {
-                g.drawString("Ammo: " + player.getHeldWeapon().getCurrentAmmo() + " / " + player.getHeldWeapon().getMagazineSize(), 10, 115);
+
+            // Only show ammo for ranged weapons
+            if (player.getHeldWeapon() instanceof combat.Ranged) {
+                combat.Ranged ranged = (combat.Ranged) player.getHeldWeapon();
+                if (ranged.isReloading()) {
+                    g.drawString("Ammo: Reloading", 10, 115);
+                } else {
+                    g.drawString("Ammo: " + ranged.getCurrentAmmo() + " / " + ranged.getMagazineSize(), 10, 115);
+                }
             }
         } else {
             g.setFont(new Font("Arial", Font.BOLD, 20));

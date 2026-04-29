@@ -15,5 +15,7 @@ public class Enemy5 extends Enemy {
         speed = 3.0;
         color = Color.YELLOW;
         ranged = true;
+        selectWeapon("smg", 5);
+        detectionRadius = 300;
     }
 }

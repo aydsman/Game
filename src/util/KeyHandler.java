@@ -16,6 +16,9 @@ public class KeyHandler implements KeyListener {
     public boolean threePressed = false;
     public boolean fourPressed = false;
     public boolean fivePressed = false;
+    public boolean kPressed = false;
+    public boolean uPressed = false;
+    public boolean fPressed = false;
 
     @Override
     public void keyPressed(KeyEvent e) {
@@ -34,6 +37,9 @@ public class KeyHandler implements KeyListener {
         if (code == KeyEvent.VK_3) threePressed = true;
         if (code == KeyEvent.VK_4) fourPressed = true;
         if (code == KeyEvent.VK_5) fivePressed = true;
+        if (code == KeyEvent.VK_K) kPressed = true;
+        if (code == KeyEvent.VK_U) uPressed = true;
+        if (code == KeyEvent.VK_F) fPressed = true;
     }
 
     @Override
@@ -53,6 +59,9 @@ public class KeyHandler implements KeyListener {
         if (code == KeyEvent.VK_3) threePressed = false;
         if (code == KeyEvent.VK_4) fourPressed = false;
         if (code == KeyEvent.VK_5) fivePressed = false;
+        if (code == KeyEvent.VK_K) kPressed = false;
+        if (code == KeyEvent.VK_U) uPressed = false;
+        if (code == KeyEvent.VK_F) fPressed = false;
     }
 
     @Override

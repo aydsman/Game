@@ -154,7 +154,7 @@ public class Ranged extends Item {
 
         // Create projectile at barrel tip with final angle and weapon damage
         Color projectileColor = getProjectileColor();
-        Projectile projectile = new Projectile(tip[0], tip[1], projectileColor, 5.0, finalAngle, damage);
+        Projectile projectile = new Projectile(tip[0], tip[1], projectileColor, 10.0, finalAngle, damage);
         projectiles.add(projectile);
 
         return projectiles;
@@ -247,5 +247,25 @@ public class Ranged extends Item {
 
     public double getAccuracyAngle() {
         return accuracyAngle;
+    }
+
+    @Override
+    public Ranged clone() {
+        Ranged cloned = (Ranged) super.clone();
+        cloned.fireRate = this.fireRate;
+        cloned.damage = this.damage;
+        cloned.accuracy = this.accuracy;
+        cloned.accuracyAngle = this.accuracyAngle;
+        cloned.magazineSize = this.magazineSize;
+        cloned.reloadTime = this.reloadTime;
+        cloned.currentAmmo = this.currentAmmo;
+        cloned.automatic = this.automatic;
+        cloned.barrelColor = this.barrelColor;
+        cloned.projectileColor = this.projectileColor;
+        cloned.barrelLength = this.barrelLength;
+        cloned.barrelHeight = this.barrelHeight;
+        cloned.isReloading = false;
+        cloned.reloadStartTime = 0;
+        return cloned;
     }
 }

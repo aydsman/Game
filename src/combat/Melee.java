@@ -1,11 +1,29 @@
 package combat;
 
+import java.awt.Color;
+import java.util.ArrayList;
+
 public class Melee extends Item {
 
     protected double attackSpeed; // attacks per second
     protected int damage; // damage per attack
     protected double range; // attack range in pixels
     protected double knockback; // knockback force
+
+    // Swing properties
+    protected double swingAngle; // total arc width in degrees
+    protected double swingSpeed; // animation speed (0.0 to 1.0 per frame)
+    protected double attackDelay; // seconds between attacks
+    protected boolean automatic; // hold to auto-swing
+
+    // Active swing state (not serialized, transient)
+    protected transient boolean isSwinging = false;
+    protected transient double swingProgress = 0.0; // 0.0 to 1.0
+    protected transient double swingAngleStart = 0.0; // radians
+    protected transient double swingAngleEnd = 0.0; // radians
+    protected transient double swingCenterAngle = 0.0; // radians, direction of swing
+    protected transient long lastAttackTime = 0;
+    protected transient java.util.List<entity.Entity> hitEntitiesThisSwing = new java.util.ArrayList<>();
 
     public Melee() {
         super();
@@ -14,6 +32,12 @@ public class Melee extends Item {
         damage = 15;
         range = 50.0; // 50 pixel range
         knockback = 5.0;
+
+        // default swing properties
+        swingAngle = 90.0; // 90 degree arc
+        swingSpeed = 0.15; // fast swing
+        attackDelay = 0.5; // 0.5 seconds between attacks
+        automatic = false;
     }
 
     public Melee(int tier) {
@@ -23,6 +47,12 @@ public class Melee extends Item {
         damage = 15;
         range = 50.0; // 50 pixel range
         knockback = 5.0;
+
+        // default swing properties
+        swingAngle = 90.0; // 90 degree arc
+        swingSpeed = 0.15; // fast swing
+        attackDelay = 0.5; // 0.5 seconds between attacks
+        automatic = false;
 
         applyTierMultipliers();
     }
@@ -81,6 +111,95 @@ public class Melee extends Item {
         // attack logic will go here
     }
 
+    // Swing mechanics
+    public boolean canAttack() {
+        long currentTime = System.currentTimeMillis();
+        return !isSwinging && (currentTime - lastAttackTime) >= (long)(attackDelay * 1000);
+    }
+
+    public void startSwing(double centerAngleRadians) {
+        if (!canAttack()) return;
+
+        isSwinging = true;
+        swingProgress = 0.0;
+        swingCenterAngle = centerAngleRadians;
+
+        // Calculate arc: swing from -angle/2 to +angle/2 relative to center
+        double halfAngleRad = Math.toRadians(swingAngle / 2.0);
+        swingAngleStart = centerAngleRadians - halfAngleRad;
+        swingAngleEnd = centerAngleRadians + halfAngleRad;
+
+        hitEntitiesThisSwing.clear();
+    }
+
+    public void updateSwing() {
+        if (!isSwinging) return;
+
+        swingProgress += swingSpeed;
+
+        if (swingProgress >= 1.0) {
+            endSwing();
+        }
+    }
+
+    public void endSwing() {
+        isSwinging = false;
+        swingProgress = 0.0;
+        lastAttackTime = System.currentTimeMillis();
+        hitEntitiesThisSwing.clear();
+    }
+
+    // Get current angle of the swing for visual arc drawing
+    public double getCurrentSwingAngle() {
+        if (!isSwinging) return swingCenterAngle;
+        // Interpolate from start to end based on progress
+        return swingAngleStart + (swingAngleEnd - swingAngleStart) * swingProgress;
+    }
+
+    // Check if a point is within the current swing arc
+    public boolean isInSwingArc(double px, double py, int playerX, int playerY) {
+        if (!isSwinging) return false;
+
+        double dx = px - playerX;
+        double dy = py - playerY;
+        double distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance > range) return false;
+
+        double angleToPoint = Math.atan2(dy, dx);
+
+        // Normalize angles to [0, 2PI]
+        double normalizedPoint = normalizeAngle(angleToPoint);
+        double normalizedStart = normalizeAngle(swingAngleStart);
+        double normalizedEnd = normalizeAngle(swingAngleEnd);
+
+        // Check if point is within the arc
+        if (normalizedStart <= normalizedEnd) {
+            return normalizedPoint >= normalizedStart && normalizedPoint <= normalizedEnd;
+        } else {
+            // Arc crosses the 0/2PI boundary
+            return normalizedPoint >= normalizedStart || normalizedPoint <= normalizedEnd;
+        }
+    }
+
+    private double normalizeAngle(double angle) {
+        while (angle < 0) angle += 2 * Math.PI;
+        while (angle >= 2 * Math.PI) angle -= 2 * Math.PI;
+        return angle;
+    }
+
+    // Getters for swing properties
+    public boolean isSwinging() { return isSwinging; }
+    public double getSwingProgress() { return swingProgress; }
+    public double getSwingAngle() { return swingAngle; }
+    public double getSwingAngleStart() { return swingAngleStart; }
+    public double getSwingAngleEnd() { return swingAngleEnd; }
+    public double getSwingCenterAngle() { return swingCenterAngle; }
+    public double getRange() { return range; }
+    public boolean isAutomatic() { return automatic; }
+    public double getAttackDelay() { return attackDelay; }
+    public java.util.List<entity.Entity> getHitEntitiesThisSwing() { return hitEntitiesThisSwing; }
+
     public int getDamage() {
         return damage;
     }
@@ -89,11 +208,35 @@ public class Melee extends Item {
         return attackSpeed;
     }
 
-    public double getRange() {
-        return range;
-    }
-
     public double getKnockback() {
         return knockback;
+    }
+
+    public void setSwingProperties(double swingAngle, double swingSpeed, double attackDelay, boolean automatic) {
+        this.swingAngle = swingAngle;
+        this.swingSpeed = swingSpeed;
+        this.attackDelay = attackDelay;
+        this.automatic = automatic;
+    }
+
+    @Override
+    public Melee clone() {
+        Melee cloned = (Melee) super.clone();
+        cloned.attackSpeed = this.attackSpeed;
+        cloned.damage = this.damage;
+        cloned.range = this.range;
+        cloned.knockback = this.knockback;
+        cloned.swingAngle = this.swingAngle;
+        cloned.swingSpeed = this.swingSpeed;
+        cloned.attackDelay = this.attackDelay;
+        cloned.automatic = this.automatic;
+        cloned.isSwinging = false;
+        cloned.swingProgress = 0;
+        cloned.swingAngleStart = 0;
+        cloned.swingAngleEnd = 0;
+        cloned.swingCenterAngle = 0;
+        cloned.lastAttackTime = 0;
+        cloned.hitEntitiesThisSwing = new ArrayList<>();
+        return cloned;
     }
 }

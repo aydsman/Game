@@ -9,7 +9,7 @@ public class Pistol1 extends Pistol {
     public Pistol1(int tier) {
         super(tier);
         // Pistol1 specific stats (basic starter pistol)
-        damage = 1;
+        // damage inherited from Pistol (4 for tier 1)
         magazineSize = 10;
         currentAmmo = magazineSize;
 

@@ -26,7 +26,7 @@ Progression-based action game with open world exploration, dungeon crawling, tow
   - Future: Map exits to other regions
 
 ### Hub Features
-- ❌ Storage chest for items
+- ✅ Storage chest for items with drag-and-drop swapping between inventory and chests
 - ❌ Charm crafting station
 - ❌ Leaderboard/stat display
 
@@ -225,7 +225,7 @@ world/
 - ❌ Currency system (coins/gold dropped by enemies)
 
 ### Combat & Weapons
-- ✏️ Melee weapons (swords, hammers, daggers) with swing animations
+- ✅ Melee weapons (swords, hammers, daggers, maces, scythes) with swing animations, arc collision, and knockback
 - ❌ Weapon attachments (scopes, silencers, extended magazines)
 - ❌ Critical hit system with visual effects
 - ❌ Status effects (burn, poison, slow, stun)
@@ -233,7 +233,7 @@ world/
 - ❌ Special abilities/ultimates with cooldowns
 
 ### Enemies & Progression
-- ✏️ Boss enemies with multiple phases and attack patterns
+- ✅ Boss enemies (Boss1) and Mini-bosses (Miniboss1) - basic implementation
 - ✅ Enemy types (Enemy1-5 variants exist)
 - ❌ Enemy factions that fight each other
 - ❌ Enemy scaling based on player level

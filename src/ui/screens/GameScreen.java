@@ -7,7 +7,8 @@ import ui.ChestUI;
 import util.Camera;
 import util.KeyHandler;
 import util.MouseHandler;
-import world.arenas.ArenaTest;
+import world.arena.arenas.ArenaTest;
+import world.arena.WaveManager;
 import world.chests.ArenaChest;
 import world.chests.Chest;
 import java.awt.Color;
@@ -22,6 +23,7 @@ public class GameScreen {
     HUD hud = new HUD();
     ChestUI chestUI = new ChestUI();
     EnemyManager enemyManager = new EnemyManager();
+    WaveManager waveManager;
     ArrayList<Chest> chests = new ArrayList<>();
     Chest activeChest = null;
     combat.Item draggedItem = null;
@@ -31,8 +33,13 @@ public class GameScreen {
     private int lastMouseX = 0;
     private int lastMouseY = 0;
     private boolean debugMode = false;
+    private boolean wavesEnabled = true; // Set to false to disable waves for debugging
+    private boolean statsPanelVisible = false; // Toggle with U key for debugging
 
     public GameScreen() {
+        waveManager = new WaveManager(enemyManager, player, arena.getWidth(), arena.getHeight());
+        waveManager.setEnabled(wavesEnabled);
+
         // spawning enemies
         /*enemyManager.spawnEnemy(500, 1000, 1);
         enemyManager.spawnEnemy(70, 100, 1);
@@ -40,12 +47,7 @@ public class GameScreen {
         enemyManager.spawnEnemy(1800, 9, 1);
         enemyManager.spawnEnemy(1000, 500, 2);*/
 
-        // Spawn test chests (tiers I-V) next to each other
-        int chestBaseX = arena.getWidth() / 2 - 100;
-        int chestY = arena.getHeight() / 2;
-        for (int tier = 1; tier <= 5; tier++) {
-            chests.add(new ArenaChest(chestBaseX + (tier - 1) * 60, chestY, tier));
-        }
+        // Chests removed - waves enabled
     }
 
     public void resetMouseClicks(MouseHandler mouse) {
@@ -61,6 +63,18 @@ public class GameScreen {
         if (key.oPressed) {
             debugMode = !debugMode;
             key.oPressed = false; // Reset to prevent rapid toggling
+        }
+
+        // Toggle stats panel with U key
+        if (key.uPressed) {
+            statsPanelVisible = !statsPanelVisible;
+            key.uPressed = false;
+        }
+
+        // Kill all enemies with K key (debug)
+        if (key.kPressed) {
+            enemyManager.killAllEnemies();
+            key.kPressed = false;
         }
 
         // Handle hotbar scrolling
@@ -113,16 +127,72 @@ public class GameScreen {
             mouse.leftPressed = false;
         }
 
+        // Use consumable on right-click
+        if (mouse.rightClicked) {
+            int selectedSlot = hud.getInventoryUI().getSelectedSlot();
+            if (selectedSlot >= 0 && selectedSlot < player.getHotbar().size()) {
+                Object item = player.getHotbar().get(selectedSlot);
+                if (item instanceof combat.consumables.Consumable) {
+                    combat.consumables.Consumable consumable = (combat.consumables.Consumable) item;
+                    double healAmount = player.getMaxHp() * consumable.getHealthRestorePercent();
+                    player.heal(healAmount);
+                    player.getHotbar().set(selectedSlot, null);
+                    player.equipHotbarSlot(selectedSlot);
+                }
+            }
+            mouse.rightClicked = false;
+        }
+
         player.update(key, mouse, arenaWidth, arenaHeight);
 
         // Restore leftPressed so drag doesn't break (don't restore leftClicked - it's one-shot)
         mouse.leftPressed = wasLeftPressed;
         camera.follow(player.getX(), player.getY(), player.getW(), player.getL(), screenWidth, screenHeight, arenaWidth, arenaHeight);
+        player.setCameraOffset(camera.x, camera.y);
         player.aimBarrel(mouse.mouseX + camera.x, mouse.mouseY + camera.y);
+
+        // Check melee swing collisions
+        if (player.getHeldWeapon() instanceof combat.Melee) {
+            checkMeleeCollisions(player, enemyManager);
+        }
         player.checkProjectileCollisions(enemyManager);
         enemyManager.update(player, arenaWidth, arenaHeight);
+        enemyManager.updateBoss(player, arenaWidth, arenaHeight);
         enemyManager.checkEnemyProjectileCollisions(player);
+
+        // Check boss melee collision
+        if (player.getHeldWeapon() instanceof combat.Melee) {
+            checkMeleeBossCollision(player, enemyManager);
+        }
         enemyManager.setDebugMode(debugMode);
+        player.setDebugMode(debugMode);
+        if (wavesEnabled) {
+            WaveManager.WaveState prevState = waveManager.getState();
+            waveManager.update(key.fPressed);
+            WaveManager.WaveState newState = waveManager.getState();
+
+            // Spawn chest when wave completes (transitions from ACTIVE to GRACE_PERIOD or COMPLETED)
+            if (prevState == WaveManager.WaveState.ACTIVE &&
+                (newState == WaveManager.WaveState.GRACE_PERIOD || newState == WaveManager.WaveState.COMPLETED)) {
+                int waveJustCompleted = waveManager.getCurrentWave();
+                int chestTier = waveManager.getChestTierForWave(waveJustCompleted);
+                int centerX = arena.getWidth() / 2;
+                int centerY = arena.getHeight() / 2;
+                chests.add(new ArenaChest(centerX, centerY, chestTier));
+            }
+
+            // Clear chests when next wave starts (transition from GRACE_PERIOD to ACTIVE)
+            if (prevState == WaveManager.WaveState.GRACE_PERIOD &&
+                newState == WaveManager.WaveState.ACTIVE) {
+                chests.clear();
+                activeChest = null;
+            }
+        }
+
+        // Track player death
+        if (player.isDead() && player.getStats().getDeaths() == 0) {
+            player.getStats().addDeath();
+        }
     }
 
     public void draw(Graphics2D g, int screenWidth, int screenHeight) {
@@ -134,8 +204,18 @@ public class GameScreen {
         }
 
         enemyManager.draw(g, camera.x, camera.y);
+        enemyManager.drawBoss(g, camera.x, camera.y);
         enemyManager.drawEnemyProjectiles(g, camera.x, camera.y);
+
+        // Draw melee swing arc
+        drawMeleeSwing(g, player, camera.x, camera.y);
+
         player.draw(g, camera.x, camera.y);
+
+        // Draw boss healthbar if active
+        if (enemyManager.getActiveBoss() != null) {
+            enemyManager.getActiveBoss().drawHealthBar(g, screenWidth, screenHeight);
+        }
 
         // Draw chest UI if active
         if (activeChest != null && activeChest.isOpen()) {
@@ -172,6 +252,58 @@ public class GameScreen {
         int textWidth = fm.stringWidth(debugStatus);
         g.drawString(debugStatus, screenWidth - textWidth - 10, 20);
 
+        // Draw wave number (top right, below debug status)
+        g.setColor(Color.WHITE);
+        g.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 18));
+        String waveText;
+        if (waveManager.isInGracePeriod()) {
+            int seconds = waveManager.getGracePeriodRemaining() / 60;
+            waveText = "Next wave in: " + seconds + "s (F to skip)";
+        } else {
+            waveText = "Wave " + waveManager.getCurrentWave();
+        }
+        fm = g.getFontMetrics();
+        textWidth = fm.stringWidth(waveText);
+        g.drawString(waveText, screenWidth - textWidth - 10, 45);
+
+        // Draw stats panel if visible (bottom left corner)
+        if (statsPanelVisible) {
+            drawStatsPanel(g, 10, screenHeight - 160);
+        }
+
+    }
+
+    private void drawStatsPanel(Graphics2D g, int x, int y) {
+        entity.PlayerStats stats = player.getStats();
+
+        // Panel background
+        int panelWidth = 200;
+        int panelHeight = 140;
+        g.setColor(new Color(0, 0, 0, 180));
+        g.fillRect(x, y, panelWidth, panelHeight);
+        g.setColor(Color.WHITE);
+        g.drawRect(x, y, panelWidth, panelHeight);
+
+        // Title
+        g.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 14));
+        g.drawString("=== STATS ===", x + 10, y + 20);
+
+        // Stats
+        g.setFont(new java.awt.Font("Arial", java.awt.Font.PLAIN, 12));
+        int lineY = y + 40;
+        int lineHeight = 16;
+
+        g.drawString("Kills: " + stats.getKills(), x + 10, lineY);
+        lineY += lineHeight;
+        g.drawString("Deaths: " + stats.getDeaths(), x + 10, lineY);
+        lineY += lineHeight;
+        g.drawString("Damage Dealt: " + (int)stats.getDamageDealt(), x + 10, lineY);
+        lineY += lineHeight;
+        g.drawString("Damage Taken: " + (int)stats.getDamageTaken(), x + 10, lineY);
+        lineY += lineHeight;
+        g.drawString("Accuracy: " + String.format("%.1f", stats.getAccuracy()) + "%", x + 10, lineY);
+        lineY += lineHeight;
+        g.drawString("Shots: " + stats.getShotsHit() + "/" + stats.getShotsFired(), x + 10, lineY);
     }
 
     private void drawChest(Graphics2D g, Chest chest) {
@@ -248,8 +380,8 @@ public class GameScreen {
 
         // Mouse press - start drag
         if (leftPressed && draggedItem == null) {
-            int inventorySlot = getInventorySlotAtPosition(mouseX, mouseY, 1, 1, screenWidth, screenHeight);
-            if (inventorySlot >= 0 && inventorySlot < player.getHotbar().size()) {
+            int inventorySlot = getInventorySlotAtPositionSimple(mouseX, mouseY, screenWidth, screenHeight);
+            if (inventorySlot >= 0 && inventorySlot < 5) {
                 Object item = player.getHotbar().get(inventorySlot);
                 if (item instanceof combat.Item) {
                     draggedItem = (combat.Item) item;
@@ -272,15 +404,11 @@ public class GameScreen {
 
         // Mouse release - end drag
         if (!leftPressed && draggedItem != null) {
-            int dragSize = 40;
-            int itemX = mouseX - dragSize / 2;
-            int itemY = mouseY - dragSize / 2;
-
             boolean placed = false;
 
-            // Check inventory slots with overlap
-            int inventorySlot = getInventorySlotAtPosition(itemX, itemY, dragSize, dragSize, screenWidth, screenHeight);
-            if (inventorySlot >= 0 && inventorySlot < player.getHotbar().size()) {
+            // Check inventory slots with simple point detection
+            int inventorySlot = getInventorySlotAtPositionSimple(mouseX, mouseY, screenWidth, screenHeight);
+            if (inventorySlot >= 0 && inventorySlot < 5) {
                 if (dragSource == 0) {
                     // From chest to inventory
                     Object destItem = player.getHotbar().get(inventorySlot);
@@ -303,7 +431,7 @@ public class GameScreen {
 
             // Check chest slots with overlap
             if (!placed) {
-                int chestSlot = chestUI.getSlotAtPosition(itemX, itemY, dragSize, dragSize, activeChest, activeChest.getX() - (int)camera.x, activeChest.getY() - (int)camera.y);
+                int chestSlot = chestUI.getSlotAtPosition(mouseX, mouseY, 1, 1, activeChest, activeChest.getX() - (int)camera.x, activeChest.getY() - (int)camera.y);
                 if (chestSlot >= 0) {
                     if (dragSource == -1) {
                         // From inventory to chest
@@ -340,12 +468,14 @@ public class GameScreen {
     private int getInventorySlotAtPosition(int itemX, int itemY, int itemW, int itemH, int screenWidth, int screenHeight) {
         int slotSize = 50;
         int slotSpacing = 5;
-        int totalWidth = (slotSize * 5) + (slotSpacing * 4);
+        int hotbarSize = 5;
+        int totalWidth = (slotSize * hotbarSize) + (slotSpacing * (hotbarSize - 1));
         int startX = (screenWidth - totalWidth) / 2;
         int startY = screenHeight - slotSize - 20;
 
         int bestSlot = -1;
         int bestOverlap = 0;
+        int minOverlap = 100; // Minimum overlap area to register (10x10 pixels)
 
         for (int i = 0; i < 5; i++) {
             int slotX = startX + (i * (slotSize + slotSpacing));
@@ -353,11 +483,133 @@ public class GameScreen {
             int overlapY = Math.max(0, Math.min(itemY + itemH, startY + slotSize) - Math.max(itemY, startY));
             int overlapArea = overlapX * overlapY;
 
-            if (overlapArea > bestOverlap) {
+            if (overlapArea > bestOverlap && overlapArea >= minOverlap) {
                 bestOverlap = overlapArea;
                 bestSlot = i;
             }
         }
         return bestSlot;
+    }
+
+    private int getInventorySlotAtPositionSimple(int mouseX, int mouseY, int screenWidth, int screenHeight) {
+        int slotSize = 50;
+        int slotSpacing = 5;
+        int hotbarSize = 5;
+        int totalWidth = (slotSize * hotbarSize) + (slotSpacing * (hotbarSize - 1));
+        int startX = (screenWidth - totalWidth) / 2;
+        int startY = screenHeight - slotSize - 20;
+
+        for (int i = 0; i < 5; i++) {
+            int slotX = startX + (i * (slotSize + slotSpacing));
+            if (mouseX >= slotX && mouseX < slotX + slotSize && mouseY >= startY && mouseY < startY + slotSize) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private void checkMeleeCollisions(Player player, entity.EnemyManager enemyManager) {
+        if (!(player.getHeldWeapon() instanceof combat.Melee)) return;
+        combat.Melee melee = (combat.Melee) player.getHeldWeapon();
+        if (!melee.isSwinging()) return;
+
+        int playerX = player.getCenterX();
+        int playerY = player.getCenterY();
+
+        for (entity.Enemy enemy : enemyManager.getEnemies()) {
+            // Skip if already hit this swing
+            if (melee.getHitEntitiesThisSwing().contains(enemy)) continue;
+
+            // Check if enemy is within swing arc
+            if (melee.isInSwingArc(enemy.getCenterX(), enemy.getCenterY(), playerX, playerY)) {
+                enemy.takeDamage(melee.getDamage());
+                player.getStats().addDamageDealt(melee.getDamage());
+                melee.getHitEntitiesThisSwing().add(enemy);
+
+                if (enemy.isDead()) {
+                    player.getStats().addKill();
+                }
+            }
+        }
+    }
+
+    private void checkMeleeBossCollision(Player player, entity.EnemyManager enemyManager) {
+        if (!(player.getHeldWeapon() instanceof combat.Melee)) return;
+        combat.Melee melee = (combat.Melee) player.getHeldWeapon();
+        if (!melee.isSwinging()) return;
+
+        entity.Boss boss = enemyManager.getActiveBoss();
+        if (boss == null) return;
+
+        // Check if boss was already hit this swing
+        if (melee.getHitEntitiesThisSwing().contains(boss)) return;
+
+        int playerX = player.getCenterX();
+        int playerY = player.getCenterY();
+
+        if (melee.isInSwingArc(boss.getCenterX(), boss.getCenterY(), playerX, playerY)) {
+            boss.takeDamage(melee.getDamage());
+            player.getStats().addDamageDealt(melee.getDamage());
+            melee.getHitEntitiesThisSwing().add(boss);
+        }
+    }
+
+    public void drawMeleeSwing(Graphics2D g, Player player, int cameraX, int cameraY) {
+        if (player.getHeldWeapon() instanceof combat.Melee) {
+            combat.Melee melee = (combat.Melee) player.getHeldWeapon();
+            if (melee.isSwinging()) {
+                int playerX = player.getCenterX() - cameraX;
+                int playerY = player.getCenterY() - cameraY;
+                double range = melee.getRange();
+
+                // Draw the swing arc
+                double startAngleRad = melee.getSwingAngleStart();
+                double endAngleRad = melee.getSwingAngleEnd();
+
+                // Convert to degrees for drawing (Swing uses 0 at 3 o'clock, counter-clockwise)
+                // Java arc angles: 0 is at 3 o'clock, positive is counter-clockwise
+                double startAngleDeg = Math.toDegrees(startAngleRad);
+                double endAngleDeg = Math.toDegrees(endAngleRad);
+
+                // Normalize to draw the arc properly
+                double arcStartDeg;
+                double arcExtentDeg;
+
+                if (Math.abs(endAngleDeg - startAngleDeg) <= 180) {
+                    arcStartDeg = startAngleDeg;
+                    arcExtentDeg = endAngleDeg - startAngleDeg;
+                } else {
+                    // Arc crosses 0/360 boundary, adjust
+                    arcStartDeg = endAngleDeg;
+                    arcExtentDeg = startAngleDeg - endAngleDeg;
+                }
+
+                // Normalize arc start to 0-360
+                while (arcStartDeg < 0) arcStartDeg += 360;
+                while (arcStartDeg > 360) arcStartDeg -= 360;
+
+                // Flip for screen coordinates (Y increases downward)
+                arcStartDeg = -arcStartDeg - arcExtentDeg;
+
+                // Draw filled arc with semi-transparent color
+                g.setColor(new Color(255, 100, 100, 100));
+                g.fillArc((int)(playerX - range), (int)(playerY - range),
+                         (int)(range * 2), (int)(range * 2),
+                         (int)arcStartDeg, (int)arcExtentDeg);
+
+                // Draw arc outline
+                g.setColor(new Color(255, 50, 50, 200));
+                g.drawArc((int)(playerX - range), (int)(playerY - range),
+                         (int)(range * 2), (int)(range * 2),
+                         (int)arcStartDeg, (int)arcExtentDeg);
+
+                // Draw swing line showing current position
+                double currentAngle = melee.getCurrentSwingAngle();
+                int lineEndX = playerX + (int)(range * Math.cos(currentAngle));
+                int lineEndY = playerY + (int)(range * Math.sin(currentAngle));
+                g.setColor(Color.RED);
+                g.drawLine(playerX, playerY, lineEndX, lineEndY);
+            }
+        }
     }
 }

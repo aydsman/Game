@@ -26,7 +26,7 @@ public class Pistol extends Ranged {
         super(tier);
         // base pistol stats: fast fire rate, low damage, high accuracy
         fireRate = 0.3; // seconds between shots
-        damage = 10;
+        damage = 4;
         accuracy = 0.85;
         accuracyAngle = 15.0; // ±15 degrees spread
         magazineSize = 12;

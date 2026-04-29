@@ -4,8 +4,8 @@ A Java-based 2D action game featuring dungeon crawling, arena combat, and progre
 
 ## Project Stats
 
-- **Total Classes:** 58
-- **Total Lines of Code:** 4,323
+- **Total Classes:** 51
+- **Total Lines of Code:** 5,480
 
 ## Features
 

@@ -26,7 +26,7 @@ public class Rifle extends Ranged {
         super(tier);
         // base rifle stats: medium fire rate, medium-high damage, medium accuracy
         fireRate = 0.15; // seconds between shots
-        damage = 15;
+        damage = 6;
         accuracy = 0.85;
         accuracyAngle = 20.0; // ±20 degrees spread
         magazineSize = 25;

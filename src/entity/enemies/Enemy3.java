@@ -10,8 +10,10 @@ public class Enemy3 extends Enemy {
         hp = 20;
         maxHp = 20;
         damage = 1.5;
-        speed = 1.2;
+        speed = 5;
         color = Color.PINK;
         ranged = true;
+        selectWeapon("shotgun", 3);
+        detectionRadius = 200;
     }
 }

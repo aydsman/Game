@@ -34,7 +34,7 @@ public class Shotgun extends Ranged {
         super(tier);
         // base shotgun stats: slow fire rate, high damage, spread pattern, close range
         fireRate = 0.4; // seconds between shots (faster firing)
-        damage = 8;
+        damage = 2;
         accuracy = 0.6;
         accuracyAngle = 15.0; // ±15 degrees spread for tighter pellet pattern
         magazineSize = 8;
@@ -72,7 +72,7 @@ public class Shotgun extends Ranged {
             double pelletAngle = barrelAngle + randomSpread;
 
             // Smaller radius (3) for pellets
-            Projectile pellet = new Projectile(tip[0], tip[1], projectileColor, 5.0, pelletAngle, damage, 3);
+            Projectile pellet = new Projectile(tip[0], tip[1], projectileColor, 10.0, pelletAngle, damage, 3);
             pellets.add(pellet);
         }
 

@@ -1,5 +1,6 @@
 package world;
 
+import world.arena.Arena;
 import world.dungeon.Room;
 import world.dungeon.Hallway;
 import java.awt.Color;

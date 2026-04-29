@@ -1,8 +1,8 @@
 # SummerGame Class Documentation
 
-**Total Classes:** 58
+**Total Classes:** 51
 
-**Total Lines of Code:** 4,323
+**Total Lines of Code:** 5,480
 
 ## Table of Contents
 
@@ -155,11 +155,31 @@
 - `damage` (int) - damage per attack
 - `range` (double) - attack range in pixels
 - `knockback` (double) - knockback force
+- `swingAngle` (double) - total arc width in degrees (default 90)
+- `swingSpeed` (double) - animation speed per frame (default 0.15)
+- `attackDelay` (double) - seconds between attacks (default 0.5)
+- `automatic` (boolean) - hold to auto-swing
+- `isSwinging` (boolean) - active swing state
+- `swingProgress` (double) - 0.0 to 1.0 progress
+- `swingAngleStart/End` (double) - arc boundaries in radians
+- `swingCenterAngle` (double) - direction of swing
+- `lastAttackTime` (long) - timestamp of last attack
+- `hitEntitiesThisSwing` (List<Entity>) - tracks entities hit in current swing
 
 **Methods:**
 - `Melee()` - Default constructor with base stats
 - `Melee(int tier)` - Constructor with tier and multipliers
 - `attack()` - Attack logic (placeholder)
+- `canAttack()` - Returns true if not swinging and attack delay elapsed
+- `startSwing(double centerAngleRadians)` - Initiates swing toward angle
+- `updateSwing()` - Updates swing progress each frame
+- `endSwing()` - Completes swing and resets state
+- `getCurrentSwingAngle()` - Returns current interpolated swing angle
+- `isInSwingArc(double px, double py, int playerX, int playerY)` - Checks if point is within swing arc and range
+- `normalizeAngle(double angle)` - Normalizes angle to [0, 2PI]
+- Getters: `isSwinging()`, `getSwingProgress()`, `getSwingAngle()`, `getRange()`, `isAutomatic()`, `getAttackDelay()`, `getHitEntitiesThisSwing()`, `getDamage()`, `getAttackSpeed()`, `getKnockback()`
+- `setSwingProperties(angle, speed, delay, automatic)` - Configures swing behavior
+- `clone()` - Deep clone with reset swing state
 
 ### Ranged.java (extends Item)
 **Fields:**
@@ -401,25 +421,56 @@
 
 ### Player.java (extends Entity)
 **Fields:**
-- `hotbar` (ArrayList<Object>) - Player's hotbar items
+- `hotbar` (ArrayList<Object>) - Player's 5-slot hotbar (slots 0-4, null for empty)
 - `xpMultiplier` (double) - XP multiplier
 - `projectiles` (ArrayList<Projectile>) - Player's projectiles
 - `lastShotTime` (long) - Time of last shot
 - `gameStartTime` (long) - Game start time
 - `canShoot` (boolean) - Can shoot flag
+- `stats` (PlayerStats) - Player statistics tracking
+- `cameraX, cameraY` (int) - Camera offset for mouse calculations
 
 **Methods:**
 - `Player(int x, int y)` - Constructor
-- `playerSpawn()` - Initializes player stats and hotbar
+- `playerSpawn()` - Initializes player with 5-slot hotbar (Pistol1 in slot 0, Sword1 in slot 1)
 - `resetMouseClicks(MouseHandler mouse)` - Resets mouse clicks
-- `update(KeyHandler key, MouseHandler mouse, int arenaWidth, int arenaHeight)` - Updates player
+- `update(KeyHandler key, MouseHandler mouse, int arenaWidth, int arenaHeight)` - Updates player movement, attacks, reloads
+- `handleMeleeAttack(MouseHandler mouse, Melee melee)` - Handles melee swing attacks
+- `handleRangedAttack(MouseHandler mouse, long currentTime)` - Handles ranged shooting with fire rate
+- `setCameraOffset(int x, int y)` - Sets camera offset for mouse aiming
 - `aimBarrel(int mouseX, int mouseY)` - Aims barrel at mouse position
 - `shoot()` - Shoots weapon
 - `updateProjectiles()` - Updates all projectiles
-- `checkProjectileCollisions(EnemyManager enemyManager)` - Checks projectile-enemy collisions
+- `checkProjectileCollisions(EnemyManager enemyManager)` - Checks projectile-enemy collisions and boss hits
 - `getProjectiles()` - Returns projectiles list
-- `getHotbar()` - Returns hotbar list
-- `equipHotbarSlot(int slot)` - Equips item from hotbar slot
+- `getHotbar()` - Returns hotbar list (5 fixed slots)
+- `equipHotbarSlot(int slot)` - Equips item from hotbar slot (supports Ranged and Melee)
+- `getStats()` - Returns PlayerStats instance
+
+### PlayerStats.java
+**Fields:**
+- `kills` (int) - Total enemies killed
+- `deaths` (int) - Total deaths
+- `damageDealt` (double) - Total damage dealt
+- `damageTaken` (double) - Total damage taken
+- `shotsFired` (int) - Total shots fired
+- `shotsHit` (int) - Total shots hit
+
+**Methods:**
+- `addKill()` - Increments kill count
+- `addDeath()` - Increments death count
+- `addDamageDealt(double damage)` - Adds to damage dealt
+- `addDamageTaken(double damage)` - Adds to damage taken
+- `addShotFired()` - Increments shots fired
+- `addShotHit()` - Increments shots hit
+- `getKills()` - Returns kills
+- `getDeaths()` - Returns deaths
+- `getDamageDealt()` - Returns damage dealt
+- `getDamageTaken()` - Returns damage taken
+- `getShotsFired()` - Returns shots fired
+- `getShotsHit()` - Returns shots hit
+- `getAccuracy()` - Returns hit percentage
+- `reset()` - Resets all stats to 0
 
 ### Enemy.java (extends Entity)
 **Fields:**
@@ -586,17 +637,19 @@
 
 ### ChestUI.java
 **Fields:**
-- `lootItems` (List<Item>) - Items in chest
-- `selectedItem` (Item) - Currently selected item
-- `isOpen` (boolean) - Chest open state
+- `slotSize` (int) - 50 pixels
+- `slotSpacing` (int) - 5 pixels
+- `hoveredSlot` (int) - Currently hovered slot index (-1 if none)
 
 **Methods:**
 - `ChestUI()` - Constructor
-- `openChest(int chestTier)` - Opens chest with loot based on tier
-- `draw(Graphics2D g, int screenWidth, int screenHeight)` - Draws chest UI
-- `handleClick(int x, int y)` - Handles clicks
-- `getSelectedItem()` - Returns selected item
-- `closeChest()` - Closes chest
+- `draw(Graphics2D g, Chest chest, int chestX, int chestY, int screenWidth, int screenHeight)` - Draws chest UI with slot highlighting
+- `setHoveredSlot(int slot)` - Sets hovered slot
+- `getHoveredSlot()` - Returns hovered slot
+- `getSlotAtPosition(mouseX, mouseY, chest, chestX, chestY)` - Returns slot at position (uses center point)
+- `getSlotAtPosition(itemX, itemY, itemW, itemH, chest, chestX, chestY)` - Returns slot with item overlap detection
+- `getSlotSize()` - Returns slot size
+- `getSlotSpacing()` - Returns slot spacing
 
 ---
 
@@ -615,18 +668,34 @@
 
 ### GameScreen.java
 **Fields:**
-- `arena` (ArenaTest)
-- `player` (Player)
-- `camera` (Camera)
-- `hud` (HUD)
-- `enemyManager` (EnemyManager)
-- `debugMode` (boolean)
+- `arena` (ArenaTest) - Current arena
+- `player` (Player) - Player entity
+- `camera` (Camera) - Camera following player
+- `hud` (HUD) - Heads-up display
+- `chestUI` (ChestUI) - Chest UI renderer
+- `enemyManager` (EnemyManager) - Manages all enemies
+- `waveManager` (WaveManager) - Handles enemy waves
+- `chests` (ArrayList<Chest>) - List of chests in arena
+- `activeChest` (Chest) - Currently open chest
+- `draggedItem` (Item) - Item being dragged
+- `dragSource` (int) - Source of drag (-1=inventory, 0=chest)
+- `dragSourceSlot` (int) - Source slot index
+- `debugMode` (boolean) - Debug info display
+- `wavesEnabled` (boolean) - Wave spawning enabled
+- `statsPanelVisible` (boolean) - Stats panel toggle
+- `lastMouseX/Y` (int) - Mouse position for dragging
 
 **Methods:**
-- `GameScreen()` - Constructor, spawns enemies
+- `GameScreen()` - Constructor, initializes wave manager
 - `resetMouseClicks(MouseHandler mouse)` - Resets mouse clicks
-- `update(KeyHandler key, MouseHandler mouse, int screenWidth, int screenHeight)` - Updates game state
-- `draw(Graphics2D g, int screenWidth, int screenHeight)` - Draws game screen
+- `update(...)` - Updates game state (input, player, enemies, waves, drag-drop)
+- `draw(...)` - Renders game (arena, entities, projectiles, UI, dragged item)
+- `findClosestChestInRange()` - Finds nearest chest within interaction range
+- `handleDragAndDrop(...)` - Manages item dragging with slot swapping between inventory and chests
+- `getInventorySlotAtPosition(...)` - Overlap-based slot detection for items
+- `getInventorySlotAtPositionSimple(...)` - Point-based slot detection for mouse
+- `checkMeleeCollisions(...)` - Checks melee hits on enemies
+- `checkMeleeBossCollision(...)` - Checks melee hits on boss
 
 ### PauseScreen.java
 **Methods:**
