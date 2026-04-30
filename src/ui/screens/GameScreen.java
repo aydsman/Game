@@ -29,6 +29,7 @@ public class GameScreen {
     combat.Item draggedItem = null;
     int dragSource = -1;
     int dragSourceSlot = -1;
+    boolean wasLeftPressedLastFrame = false;
     boolean ePressedLastFrame = false;
     private int lastMouseX = 0;
     private int lastMouseY = 0;
@@ -127,10 +128,10 @@ public class GameScreen {
             mouse.leftPressed = false;
         }
 
-        // Use consumable on right-click
-        if (mouse.rightClicked) {
+        // Use consumable on left-click when equipped
+        if (mouse.leftClicked) {
             int selectedSlot = hud.getInventoryUI().getSelectedSlot();
-            if (selectedSlot >= 0 && selectedSlot < player.getHotbar().size()) {
+            if (selectedSlot >= 0 && selectedSlot < 5) {
                 Object item = player.getHotbar().get(selectedSlot);
                 if (item instanceof combat.consumables.Consumable) {
                     combat.consumables.Consumable consumable = (combat.consumables.Consumable) item;
@@ -138,9 +139,9 @@ public class GameScreen {
                     player.heal(healAmount);
                     player.getHotbar().set(selectedSlot, null);
                     player.equipHotbarSlot(selectedSlot);
+                    mouse.leftClicked = false; // Prevent shooting after using consumable
                 }
             }
-            mouse.rightClicked = false;
         }
 
         player.update(key, mouse, arenaWidth, arenaHeight);
@@ -378,8 +379,8 @@ public class GameScreen {
             return;
         }
 
-        // Mouse press - start drag
-        if (leftPressed && draggedItem == null) {
+        // Mouse press - start drag (only on first frame of press)
+        if (leftPressed && draggedItem == null && !wasLeftPressedLastFrame) {
             int inventorySlot = getInventorySlotAtPositionSimple(mouseX, mouseY, screenWidth, screenHeight);
             if (inventorySlot >= 0 && inventorySlot < 5) {
                 Object item = player.getHotbar().get(inventorySlot);
@@ -391,7 +392,9 @@ public class GameScreen {
             }
 
             if (draggedItem == null) {
-                int chestSlot = chestUI.getSlotAtPosition(mouseX, mouseY, activeChest, activeChest.getX() - (int)camera.x, activeChest.getY() - (int)camera.y);
+                int chestX = activeChest.getX() - (int)camera.x;
+                int chestY = activeChest.getY() - (int)camera.y;
+                int chestSlot = chestUI.getSlotAtPosition(mouseX, mouseY, activeChest, chestX, chestY);
                 if (chestSlot >= 0) {
                     draggedItem = activeChest.getItem(chestSlot);
                     if (draggedItem != null) {
@@ -401,6 +404,19 @@ public class GameScreen {
                 }
             }
         }
+        // Also check for drag start on subsequent frames if not dragging yet (for when mouse moves onto item while holding)
+        if (leftPressed && draggedItem == null && wasLeftPressedLastFrame) {
+            int inventorySlot = getInventorySlotAtPositionSimple(mouseX, mouseY, screenWidth, screenHeight);
+            if (inventorySlot >= 0 && inventorySlot < 5) {
+                Object item = player.getHotbar().get(inventorySlot);
+                if (item instanceof combat.Item) {
+                    draggedItem = (combat.Item) item;
+                    dragSource = -1;
+                    dragSourceSlot = inventorySlot;
+                }
+            }
+        }
+        wasLeftPressedLastFrame = leftPressed;
 
         // Mouse release - end drag
         if (!leftPressed && draggedItem != null) {
@@ -431,7 +447,9 @@ public class GameScreen {
 
             // Check chest slots with overlap
             if (!placed) {
-                int chestSlot = chestUI.getSlotAtPosition(mouseX, mouseY, 1, 1, activeChest, activeChest.getX() - (int)camera.x, activeChest.getY() - (int)camera.y);
+                int chestX = activeChest.getX() - (int)camera.x;
+                int chestY = activeChest.getY() - (int)camera.y;
+                int chestSlot = chestUI.getSlotAtPosition(mouseX, mouseY, activeChest, chestX, chestY);
                 if (chestSlot >= 0) {
                     if (dragSource == -1) {
                         // From inventory to chest

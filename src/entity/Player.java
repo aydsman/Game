@@ -53,9 +53,10 @@ public class Player extends Entity {
         for (int i = 0; i < 5; i++) {
             hotbar.add(null);
         }
-        // Set starting items in slots 0 and 1
+        // Set starting items in slots 0, 1, and 2
         hotbar.set(0, new combat.ranged.pistols.Pistol1(1));
         hotbar.set(1, new combat.melee.swords.Sword1(1));
+        hotbar.set(2, new combat.consumables.Consumable1(1));
 
         // Equip first hotbar slot by default
         equipHotbarSlot(0);
@@ -269,6 +270,9 @@ public class Player extends Entity {
                 ranged = true;
             } else if (item instanceof combat.Melee) {
                 heldWeapon = (combat.Melee) item;
+                ranged = false;
+            } else if (item instanceof combat.consumables.Consumable) {
+                heldWeapon = null;
                 ranged = false;
             }
         }
