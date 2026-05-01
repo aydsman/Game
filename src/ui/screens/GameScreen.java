@@ -55,13 +55,6 @@ public class GameScreen {
         // Give player Fire power for testing
         player.getInventory().equipPower(new combat.powers.Fire());
 
-        // spawning enemies
-        /*enemyManager.spawnEnemy(500, 1000, 1);
-        enemyManager.spawnEnemy(70, 100, 1);
-        enemyManager.spawnEnemy(1500, 1500, 1);
-        enemyManager.spawnEnemy(1800, 9, 1);
-        enemyManager.spawnEnemy(1000, 500, 2);*/
-
         // Chests spawn via waves
     }
 

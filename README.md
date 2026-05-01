@@ -1,169 +1,294 @@
 # Abyss
 
-A Java-based 2D action game featuring dungeon crawling, arena combat, and progression systems.
+A Java-based 2D action game featuring dungeon crawling, arena combat, wave survival, and RPG progression systems.
 
 ## Project Stats
 
 - **Total Classes:** 96
 - **Total Lines of Code:** 7,832
+- **Language:** Java 17+
+
+## Table of Contents
+
+- [Features](#features)
+- [Controls](#controls)
+- [Screens](#screens)
+- [Project Structure](#project-structure)
+- [Systems](#systems)
+- [Running the Game](#running-the-game)
+- [Documentation](#documentation)
 
 ## Features
 
 ### Combat System
-- Multiple weapon types (pistols, rifles, shotguns, SMGs, snipers)
-- Melee weapons (swords, hammers, daggers, maces, scythes)
-- Weapon rarity tiers (I-V)
-- Fire rate, damage, accuracy, and reload mechanics
-- Projectile-based combat
-- Accuracy angle spread for ranged weapons
-- Shotgun pellet system (multiple pellets per shot)
+
+#### Ranged Weapons
+| Weapon | Type | Fire Mode | Description |
+|--------|------|-----------|-------------|
+| Glock | Pistol | Semi-auto | Fast fire rate, low damage, high accuracy |
+| AK-47 | Rifle | Automatic | Medium fire rate, medium damage, medium accuracy |
+| Pump-Action | Shotgun | Semi-auto | Multiple pellets, high damage, low accuracy |
+| P90 | SMG | Automatic | Very fast fire rate, low damage, medium accuracy |
+| Sniper1 | Sniper | Semi-auto | Very slow fire rate, very high damage, very high accuracy |
+
+#### Melee Weapons
+All melee weapons feature:
+- Swing animations with arc-based collision detection
+- Knockback effects
+- Configurable swing angle, speed, and attack delay
+- Automatic or manual swing modes
+
+| Weapon | Attack Speed | Damage | Range | Special |
+|--------|-------------|--------|-------|---------|
+| Sword | Balanced | Medium | Medium | 90° swing arc |
+| Hammer | Slow | High | Medium | High knockback |
+| Dagger | Fast | Low | Low | Quick strikes |
+| Mace | Slow | High | Medium | Heavy impact |
+| Scythe | Medium | Medium | High | Wide arc |
+
+#### Power System
+5 elemental powers with 3 moves each (activated with keys 1-3):
+- **Fire** - Offensive fire magic
+- **Light** - Healing and protection
+- **Earth** - Barriers and crushing attacks
+- **Lightning** - Speed and chain attacks
+- **Water** - Control and freezing
 
 ### Entity System
-- Player with leveling and XP progression
-- Enemy variants with different behaviors
-- Boss enemies with enhanced stats
-- Enemy manager for spawning and tracking
+
+- **Player**: Leveling, XP progression, stats tracking (kills, damage, accuracy)
+- **Enemies**: 5 variants with different behaviors and detection radii
+- **Bosses**: Enhanced stats with unique behaviors
+- **Mini-bosses**: Mid-tier challenging enemies
+
+### Wave System
+- 10 waves of increasing difficulty
+- Configurable spawn intervals and enemy types per wave
+- Grace period between waves
+- Spawn protection radius around player
 
 ### Dungeon System
-- Procedurally generated dungeons with 5 levels
-- Room types: Spawn, Enemy, Loot, Mini-boss, Boss
+- 5 procedurally generated levels
+- Room types: Spawn (White), Enemy (Red), Loot (Yellow), Mini-boss (Pink), Boss (Purple)
+- Graph-based generation using MST and Delaunay triangulation
 - Hallway connections with collision detection
-- Smooth camera transitions
-- Room coloring by type
-- Graph test visualization for debugging
+- Room count scales with level (13-20 rooms)
+- Loot room distribution: 1 guaranteed, 66% chance for 2nd, 33% chance for 3rd
+
+### Inventory System
+- **Hotbar**: 5 slots for weapons
+- **Charms**: 3 slots for passive bonuses
+- **Power**: 1 slot for elemental abilities
+- **Summon**: 1 slot for summon abilities
+- Drag-and-drop item management
+- Chest looting with tier-based item generation
 
 ### UI System
-- Main menu with navigation
-- Game screen with HUD (HP, XP, hotbar)
-- Pause, Settings, Help, and Customize screens
-- Inventory system with hotbar slots
-- Item Gallery screen with tier cycling (scroll wheel)
-- Chest UI for loot display
-
-### Progression
-- XP-based leveling system
-- Stat multipliers (damage, speed, HP)
-- Weapon tiers with scaling stats
-- Item registry with loot tables for chests
-- Multiple item types: Weapons, Charms, Summons, Powers, Consumables
+- Item icons with aspect ratio preservation
+- Tier cycling in Item Gallery (mouse wheel)
+- Debug overlays (toggle with O key)
+- Stats panel (toggle with U key)
 
 ## Controls
 
-- **WASD / Arrow Keys:** Movement
-- **Mouse:** Aim
-- **Left Click:** Shoot
-- **R:** Reload
-- **1-5:** Switch hotbar slot
-- **Mouse Wheel:** Cycle hotbar
-- **L (Dungeon):** Advance to next level
-- **O:** Toggle debug mode
+### Movement & Combat
+| Key | Action |
+|-----|--------|
+| WASD / Arrow Keys | Movement |
+| Mouse | Aim |
+| Left Click | Shoot / Melee attack |
+| R | Reload |
+| 1-5 | Use Power moves (when power equipped) |
+| Space | Interact (chests) |
+
+### Hotbar
+| Input | Action |
+|-------|--------|
+| Mouse Wheel | Cycle hotbar slots |
+| Tab | Open/Close inventory |
+
+### Debug & System
+| Key | Action |
+|-----|--------|
+| O | Toggle debug mode |
+| U | Toggle stats panel |
+| K | Kill all enemies (debug) |
+| F | Toggle fullscreen |
+| Esc / P | Pause |
+
+### Dungeon
+| Key | Action |
+|-----|--------|
+| L | Advance to next level |
+| E | Interact |
+
+## Screens
+
+1. **MenuScreen** - Main menu with Play, Customize, Settings, Help buttons
+2. **GameScreen** - Main gameplay with arena combat and wave management
+3. **DungeonArenaScreen** - Procedurally generated dungeon crawling
+4. **ItemGalleryScreen** - Browse all items with tier cycling and detailed stats
+5. **GraphTestScreen** - Visualize dungeon generation algorithm
+6. **InventoryScreen** - Full inventory management
+7. **PauseScreen** - Pause overlay
+8. **SettingsScreen** - Game settings
+9. **HelpScreen** - Controls and help
+10. **CustomizeScreen** - Character customization
 
 ## Project Structure
 
 ```
 src/
-├── Main.java              # Entry point
-├── combat/                # Combat items
-│   ├── Item.java          # Base class
-│   ├── ItemRegistry.java  # Item registry with loot tables
-│   ├── Ranged.java        # Ranged weapons
-│   ├── Melee.java         # Melee weapons
-│   ├── Projectile.java    # Projectiles
-│   ├── ranged/            # Ranged weapon types
-│   │   ├── pistols/
-│   │   ├── rifles/
-│   │   ├── shotguns/
-│   │   ├── smgs/
-│   │   └── snipers/
-│   ├── melee/             # Melee weapon types
-│   │   ├── swords/
-│   │   ├── hammers/
-│   │   ├── daggers/
-│   │   ├── maces/
-│   │   └── scythes/
-│   ├── combat.charms/            # Charm items
-│   ├── summons/           # Summon items
-│   ├── combat.powers/            # Power items
-│   └── combat.consumables/       # Consumable items
-├── entity/                # Game entities
-│   ├── Entity.java        # Base class
-│   ├── Player.java
-│   ├── Enemy.java
-│   ├── Boss.java
-│   ├── EnemyManager.java
-│   ├── enemies/           # Enemy variants
-│   └── boss/              # Boss variants
-├── inventory/             # Inventory system
-│   └── Inventory.java
-├── progression/           # Progression system
-│   └── XP.java
-├── ui/                    # User interface
-│   ├── Game.java
-│   ├── GamePanel.java
-│   ├── HUD.java
-│   ├── InventoryUI.java
-│   ├── ChestUI.java
-│   └── screens/           # Game screens
+├── Main.java                    # Entry point
+├── combat/                      # Combat and items
+│   ├── Item.java                # Base item class (tier, rarity, iconPath)
+│   ├── ItemRegistry.java        # Item registration and loot tables
+│   ├── Ranged.java              # Ranged weapon base (fireRate, damage, accuracy, reload)
+│   ├── Melee.java               # Melee weapon base (swing arc, knockback, attackSpeed)
+│   ├── Projectile.java          # Bullet/projectile physics
+│   ├── Inventory.java           # Player inventory (charms, powers, summons)
+│   ├── ranged/                  # Ranged weapon implementations
+│   │   ├── pistols/Pistol1.java (Glock)
+│   │   ├── rifles/Rifle1.java (AK-47)
+│   │   ├── shotguns/Shotgun1.java (Pump-Action)
+│   │   ├── smgs/SMG1.java (P90)
+│   │   └── snipers/Sniper1.java
+│   ├── melee/                   # Melee weapon implementations
+│   │   ├── swords/Sword1.java
+│   │   ├── hammers/Hammer1.java
+│   │   ├── daggers/Dagger1.java
+│   │   ├── maces/Mace1.java
+│   │   └── scythes/Scythe1.java
+│   ├── charms/                  # Charm items (passive bonuses)
+│   │   ├── Charm.java
+│   │   └── Charm1.java
+│   ├── powers/                  # Elemental powers
+│   │   ├── Power.java           # Base power class (moves array)
+│   │   ├── Move.java            # Individual move (name, slot, unlocked)
+│   │   ├── Fire.java
+│   │   ├── Light.java
+│   │   ├── Earth.java
+│   │   ├── Lightning.java
+│   │   └── Water.java
+│   ├── summons/                 # Summon items
+│   │   ├── Summon.java
+│   │   └── Summon1.java
+│   └── consumables/             # Consumable items
+│       ├── Consumable.java
+│       ├── Consumable1.java
+│       ├── Consumable2.java
+│       └── Consumable3.java
+├── entity/                      # Game entities
+│   ├── Entity.java              # Base entity (position, HP, damage, speed)
+│   ├── Player.java                # Player with hotbar, projectiles, stats
+│   ├── PlayerStats.java           # Track kills, damage, accuracy
+│   ├── Enemy.java                 # Base enemy with AI and detection
+│   ├── EnemyManager.java          # Spawn and manage enemies
+│   ├── Boss.java                  # Boss base class
+│   ├── enemies/                 # Enemy variants (Enemy1-5)
+│   ├── boss/Boss1.java
+│   └── miniboss/Miniboss1.java
+├── inventory/                   # (legacy - merged into combat/Inventory.java)
+├── progression/
+│   └── XP.java                  # XP and leveling system
+├── ui/                          # User interface
+│   ├── Game.java                # JFrame setup
+│   ├── GamePanel.java           # Main game loop and screen switching
+│   ├── HUD.java                 # Heads-up display (HP, XP, hotbar)
+│   ├── InventoryUI.java         # Hotbar rendering
+│   ├── ChestUI.java             # Chest looting interface
+│   ├── InventoryScreen.java     # Full inventory screen
+│   └── screens/                 # Game screens
 │       ├── MenuScreen.java
-│       ├── GameScreen.java
+│       ├── GameScreen.java      # Main gameplay (982 lines)
+│       ├── DungeonArenaScreen.java
+│       ├── ItemGalleryScreen.java
+│       ├── GraphTestScreen.java
 │       ├── PauseScreen.java
-│       ├── CustomizeScreen.java
 │       ├── SettingsScreen.java
 │       ├── HelpScreen.java
-│       ├── ItemGalleryScreen.java
-│       └── GraphTestScreen.java
-├── util/                  # Utilities
-│   ├── Camera.java
-│   ├── KeyHandler.java
-│   └── MouseHandler.java
-└── world/                 # World management
-    ├── Arena.java         # Base arena class
-    ├── arenas/            # Arena implementations
-    │   └── ArenaTest.java
-    ├── DungeonArena.java  # Dungeon arena
-    └── dungeon/           # Dungeon generation
-        ├── Room.java
-        ├── DungeonGenerator.java
-        └── Hallway.java
+│       └── CustomizeScreen.java
+├── util/                        # Utilities
+│   ├── Camera.java              # Smooth camera following
+│   ├── KeyHandler.java          # Keyboard input (WASD, 1-5, R, O, etc.)
+│   └── MouseHandler.java        # Mouse input (aim, click, scroll)
+└── world/                       # World management
+    ├── Arena.java               # Base arena class
+    ├── DungeonArena.java        # Dungeon arena implementation
+    ├── GameMap.java             # Map system
+    ├── Tile.java                # Map tiles
+    ├── arena/
+    │   ├── Arena.java           # (duplicate?)
+    │   ├── WaveManager.java     # Wave spawning logic
+    │   └── arenas/            # Arena instances
+    │       ├── ArenaTest.java
+    │       ├── Arena1.java
+    │       ├── Arena2.java
+    │       └── Arena3.java
+    ├── chests/
+    │   ├── Chest.java           # Loot chests
+    │   └── ArenaChest.java
+    └── dungeon/                 # Dungeon generation
+        ├── Room.java            # Room data (type, position, connections)
+        ├── Hallway.java         # Hallway connection logic
+        └── DungeonGenerator.java # Procedural generation (MST, Delaunay)
 ```
+
+## Systems
+
+### Weapon Tier System
+Weapons have 5 tiers (I-V) with scaling stats:
+- Tier I: Base stats
+- Tier II: 1.2x multipliers
+- Tier III: 1.5x multipliers
+- Tier IV: 1.8x multipliers
+- Tier V: 2.2x multipliers
+
+### Loot Tables
+Chests use probability-based loot tables:
+- Higher tier chests = better item chances
+- Items categorized: Weapons, Charms, Powers, Summons, Consumables
+
+### Power Move System
+- Powers have 1-4 moves in assigned slots
+- Moves displayed in bottom-right UI when power equipped
+- Keys 1-3 activate corresponding moves
+- All moves currently unlocked (no cooldowns yet)
+
+### Collision Systems
+- **Ranged**: Projectile-enemy collision with accuracy spread
+- **Melee**: Arc-based collision within swing range and angle
+- **Dungeon**: Room/hallway boundary collision with opening detection
+- **Camera**: Smooth lerp (0.1 speed) following player
 
 ## Running the Game
 
-1. Ensure you have Java 17 or higher installed
-2. Compile the project: `javac src/**/*.java`
-3. Run: `java Main`
+### Requirements
+- Java 17 or higher
+- Minimum 4GB RAM
+- Display: 1600x900 recommended
 
-## Development
+### Compile & Run
+```bash
+# Compile all Java files
+javac -d out src/**/*.java
 
-### Dungeon Generation
-- Graph-based approach using MST and Delaunay triangulation
-- Room connections from spawn with probability-based branching
-- Dead ends and loops for varied paths
-- Scaling factor for gameplay (10x) vs graph test (1x)
+# Run the game
+java -cp out Main
+```
 
-### Collision Detection
-- Player constrained to rooms/hallways
-- Can only exit through hallway openings
-- 75% overlap requirement for transitions
-- Independent axis constraining for smooth movement
-
-### Camera System
-- Smooth camera transitions with lerp (0.1 speed)
-- Centers on rooms in dungeons
-- Follows player in arena
-- Target-based positioning for accurate aiming
-
-## Future Plans
-
-- Hub world with NPCs and portals
-- Tower defense mode
-- Skill tree system
-- Save/load system
-- Co-op multiplayer
-- More weapon types and attachments
-- Environmental hazards and secrets
+### IDE Setup (IntelliJ IDEA)
+1. Open project folder
+2. Mark `src/` as Sources Root
+3. Set SDK to Java 17+
+4. Run `Main.java`
 
 ## Documentation
 
-- [CLASS_DOCUMENTATION.md](CLASS_DOCUMENTATION.md) - Detailed class documentation
-- [NOTES.md](NOTES.md) - Game design notes and development roadmap
+- **[CLASS_DOCUMENTATION.md](CLASS_DOCUMENTATION.md)** - Detailed class and method documentation
+- **[NOTES.md](NOTES.md)** - Game design notes, roadmap, and feature status
+- **[STORY.md](STORY.md)** - Game lore and narrative
+
+---
+
+*Last updated: May 2026*
