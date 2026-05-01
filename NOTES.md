@@ -1,5 +1,10 @@
 # Game Design Notes
 
+## Project Stats
+
+- **Total Classes:** 96
+- **Total Lines of Code:** 7,832
+
 ## Legend
 - ✅ = Completed
 - ❌ = Not started
@@ -216,7 +221,7 @@ world/
 ## Additional Features (Future)
 
 ### Items & Loot
-- ❌ Chests with random loot (weapons, ammo, health, charms)
+- ❌ Chests with random loot (weapons, ammo, health, combat.charms)
 - ❌ Different chest rarities (common, rare, legendary)
 - ❌ Keys required to open certain chests
 - ❌ Armor pieces (helmet, chestplate, legs) with defense stats

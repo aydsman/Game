@@ -14,7 +14,7 @@ public class Shotgun extends Ranged {
     public Shotgun() {
         // base shotgun stats: slow fire rate, high damage, spread pattern, close range
         fireRate = 0.4; // seconds between shots (faster firing)
-        damage = 3;
+        damage = 30;
         accuracy = 0.6;
         accuracyAngle = 15.0; // ±15 degrees spread for tighter pellet pattern
         magazineSize = 8;
@@ -34,7 +34,7 @@ public class Shotgun extends Ranged {
         super(tier);
         // base shotgun stats: slow fire rate, high damage, spread pattern, close range
         fireRate = 0.4; // seconds between shots (faster firing)
-        damage = 2;
+        damage = 20;
         accuracy = 0.6;
         accuracyAngle = 15.0; // ±15 degrees spread for tighter pellet pattern
         magazineSize = 8;

@@ -5,7 +5,7 @@ import javax.swing.JFrame;
 public class Game {
 
     public Game() {
-        JFrame window = new JFrame("SummerGame");
+        JFrame window = new JFrame("Abyss");
         window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         window.setResizable(false);
 

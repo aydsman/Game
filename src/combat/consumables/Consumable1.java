@@ -2,7 +2,7 @@ package combat.consumables;
 
 public class Consumable1 extends Consumable {
     public Consumable1() {
-        this(1);
+        this(2);
     }
 
     public Consumable1(int tier) {

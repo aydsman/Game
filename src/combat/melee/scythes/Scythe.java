@@ -7,7 +7,7 @@ public class Scythe extends Melee {
     public Scythe() {
         // base scythe stats: slow attack speed, high damage, long range
         attackSpeed = 0.6; // 0.6 attacks per second
-        damage = 15;
+        damage = 150;
         range = 80.0; // 80 pixel range
         knockback = 8.0;
         name = "Scythe";
@@ -17,7 +17,7 @@ public class Scythe extends Melee {
         super(tier);
         // base scythe stats: slow attack speed, high damage, long range
         attackSpeed = 0.6; // 0.6 attacks per second
-        damage = 15;
+        damage = 150;
         range = 80.0; // 80 pixel range
         knockback = 8.0;
         name = "Scythe";

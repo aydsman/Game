@@ -7,7 +7,7 @@ public class Sword extends Melee {
     public Sword() {
         // base sword stats: balanced attack speed, medium damage, medium range
         attackSpeed = 1.2; // 1.2 attacks per second
-        damage = 8;
+        damage = 80;
         range = 60.0; // 60 pixel range
         knockback = 3.0;
         name = "Sword";
@@ -17,7 +17,7 @@ public class Sword extends Melee {
         super(tier);
         // base sword stats: balanced attack speed, medium damage, medium range
         attackSpeed = 1.2; // 1.2 attacks per second
-        damage = 8;
+        damage = 80;
         range = 60.0; // 60 pixel range
         knockback = 3.0;
         name = "Sword";

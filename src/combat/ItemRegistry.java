@@ -10,12 +10,13 @@ import combat.ranged.rifles.Rifle1;
 import combat.ranged.shotguns.Shotgun1;
 import combat.ranged.smgs.SMG1;
 import combat.ranged.snipers.Sniper1;
-import combat.charms.Charm;
 import combat.charms.Charm1;
-import combat.summons.Summon;
 import combat.summons.Summon1;
-import combat.powers.Power;
-import combat.powers.Power1;
+import combat.powers.Fire;
+import combat.powers.Light;
+import combat.powers.Earth;
+import combat.powers.Lightning;
+import combat.powers.Water;
 import combat.consumables.Consumable1;
 import combat.consumables.Consumable2;
 import combat.consumables.Consumable3;
@@ -38,14 +39,14 @@ public class ItemRegistry {
     // Loot tier probabilities per chest tier [T1%, T2%, T3%, T4%, T5%]
     private static final double[][] LOOT_TABLE = {
         {80, 15,  5,  0,  0},  // Tier I chest
-        {35, 45, 10,  6,  4},  // Tier II chest
-        {15, 25, 40, 15,  5},  // Tier III chest
-        { 0, 10, 45, 30, 15},  // Tier IV chest
-        { 0,  0,  0, 65, 35},  // Tier V chest
+        {50, 35, 12,  3,  0},  // Tier II chest
+        {20, 40, 30,  8,  2},  // Tier III chest
+        { 0,  0, 35, 45, 20},  // Tier IV chest
+        { 0,  0,  0, 60, 40},  // Tier V chest
     };
 
     public ItemRegistry() {
-        // Register weapons (tier 1 variants for now)
+        // Register weapons (base templates - tier will be rolled separately)
         // Ranged
         weapons.add(new Pistol1(1));
         weapons.add(new Rifle1(1));
@@ -59,13 +60,17 @@ public class ItemRegistry {
         weapons.add(new Mace1(1));
         weapons.add(new Scythe1(1));
 
-        // Register other item types (no tiers for now)
-        charms.add(new Charm1());
-        summons.add(new Summon1());
-        powers.add(new Power1());
-        consumables.add(new Consumable1());
-        consumables.add(new Consumable2());
-        consumables.add(new Consumable3());
+        // Register other item types with their fixed tiers
+        charms.add(new Charm1()); // Tier 1
+        summons.add(new Summon1()); // Tier 1
+        powers.add(new Fire()); // Tier 1
+        powers.add(new Light()); // Tier 1
+        powers.add(new Earth()); // Tier 1
+        powers.add(new Lightning()); // Tier 1
+        powers.add(new Water()); // Tier 1
+        consumables.add(new Consumable1()); // Tier 2 (like Fortnite mini shields)
+        consumables.add(new Consumable2()); // Tier 3 (like big shields)
+        consumables.add(new Consumable3()); // Tier 4
 
         // Add all to combined list
         allItems.addAll(weapons);
@@ -159,7 +164,7 @@ public class ItemRegistry {
             lootList.add(firstGun);
 
             // Roll for second gun
-            double secondGunChance = (chestTier == 4) ? 0.25 : 0.66;
+            double secondGunChance = (chestTier == 4) ? 0.25 : 1.0; // Tier 5 always gets 2 guns
             if (random.nextDouble() < secondGunChance) {
                 Item secondGun;
                 do {
@@ -196,33 +201,128 @@ public class ItemRegistry {
     }
 
     private Item getRandomWeapon(int chestTier) {
-        Item weapon = getRandomItemFromListByTier(weapons, chestTier);
-        Item selected = weapon != null ? weapon : weapons.get(random.nextInt(weapons.size()));
-        return selected.clone();
+        // Roll for tier using LOOT_TABLE
+        int itemTier = rollTierFromChest(chestTier);
+        // Pick random weapon from weapons list
+        Item weaponTemplate = weapons.get(random.nextInt(weapons.size()));
+        // Clone with the rolled tier
+        Item weapon = weaponTemplate.clone();
+        weapon.setTier(itemTier);
+        return weapon;
     }
 
     private Item getRandomConsumable(int chestTier) {
-        Item consumable = getRandomItemFromListByTier(consumables, chestTier);
-        Item selected = consumable != null ? consumable : consumables.get(random.nextInt(consumables.size()));
-        return selected.clone();
+        // Roll for tier using LOOT_TABLE
+        int itemTier = rollTierFromChest(chestTier);
+        // Filter combat.consumables by rolled tier
+        List<Item> tierConsumables = consumables.stream()
+                .filter(item -> item.getTier() == itemTier)
+                .collect(Collectors.toList());
+        // If no items at this tier, try lower tiers
+        if (tierConsumables.isEmpty()) {
+            for (int t = itemTier - 1; t >= 1; t--) {
+                final int tier = t;
+                tierConsumables = consumables.stream()
+                        .filter(item -> item.getTier() == tier)
+                        .collect(Collectors.toList());
+                if (!tierConsumables.isEmpty()) break;
+            }
+        }
+        // Fallback to random if still empty
+        if (tierConsumables.isEmpty()) {
+            return consumables.get(random.nextInt(consumables.size())).clone();
+        }
+        return tierConsumables.get(random.nextInt(tierConsumables.size())).clone();
     }
 
     private Item getRandomCharm(int chestTier) {
-        Item charm = getRandomItemFromListByTier(charms, chestTier);
-        Item selected = charm != null ? charm : charms.get(random.nextInt(charms.size()));
-        return selected.clone();
+        // Roll for tier using LOOT_TABLE
+        int itemTier = rollTierFromChest(chestTier);
+        // Filter combat.charms by rolled tier
+        List<Item> tierCharms = charms.stream()
+                .filter(item -> item.getTier() == itemTier)
+                .collect(Collectors.toList());
+        // If no items at this tier, try lower tiers
+        if (tierCharms.isEmpty()) {
+            for (int t = itemTier - 1; t >= 1; t--) {
+                final int tier = t;
+                tierCharms = charms.stream()
+                        .filter(item -> item.getTier() == tier)
+                        .collect(Collectors.toList());
+                if (!tierCharms.isEmpty()) break;
+            }
+        }
+        // Fallback to random if still empty
+        if (tierCharms.isEmpty()) {
+            return charms.get(random.nextInt(charms.size())).clone();
+        }
+        return tierCharms.get(random.nextInt(tierCharms.size())).clone();
     }
 
     private Item getRandomSummon(int chestTier) {
-        Item summon = getRandomItemFromListByTier(summons, chestTier);
-        Item selected = summon != null ? summon : summons.get(random.nextInt(summons.size()));
-        return selected.clone();
+        // Roll for tier using LOOT_TABLE
+        int itemTier = rollTierFromChest(chestTier);
+        // Filter summons by rolled tier
+        List<Item> tierSummons = summons.stream()
+                .filter(item -> item.getTier() == itemTier)
+                .collect(Collectors.toList());
+        // If no items at this tier, try lower tiers
+        if (tierSummons.isEmpty()) {
+            for (int t = itemTier - 1; t >= 1; t--) {
+                final int tier = t;
+                tierSummons = summons.stream()
+                        .filter(item -> item.getTier() == tier)
+                        .collect(Collectors.toList());
+                if (!tierSummons.isEmpty()) break;
+            }
+        }
+        // Fallback to random if still empty
+        if (tierSummons.isEmpty()) {
+            return summons.get(random.nextInt(summons.size())).clone();
+        }
+        return tierSummons.get(random.nextInt(tierSummons.size())).clone();
     }
 
     private Item getRandomPower(int chestTier) {
-        Item power = getRandomItemFromListByTier(powers, chestTier);
-        Item selected = power != null ? power : powers.get(random.nextInt(powers.size()));
-        return selected.clone();
+        // Roll for tier using LOOT_TABLE
+        int itemTier = rollTierFromChest(chestTier);
+        // Filter combat.powers by rolled tier
+        List<Item> tierPowers = powers.stream()
+                .filter(item -> item.getTier() == itemTier)
+                .collect(Collectors.toList());
+        // If no items at this tier, try lower tiers
+        if (tierPowers.isEmpty()) {
+            for (int t = itemTier - 1; t >= 1; t--) {
+                final int tier = t;
+                tierPowers = powers.stream()
+                        .filter(item -> item.getTier() == tier)
+                        .collect(Collectors.toList());
+                if (!tierPowers.isEmpty()) break;
+            }
+        }
+        // Fallback to random if still empty
+        if (tierPowers.isEmpty()) {
+            return powers.get(random.nextInt(powers.size())).clone();
+        }
+        return tierPowers.get(random.nextInt(tierPowers.size())).clone();
+    }
+
+    private int rollTierFromChest(int chestTier) {
+        if (chestTier < 1 || chestTier > 5) return 1;
+
+        double[] chances = LOOT_TABLE[chestTier - 1];
+        double roll = random.nextDouble() * 100;
+
+        int selectedTier = 1;
+        double cumulative = 0;
+        for (int i = 0; i < chances.length; i++) {
+            cumulative += chances[i];
+            if (roll < cumulative) {
+                selectedTier = i + 1;
+                break;
+            }
+        }
+        return selectedTier;
     }
 
     private Item getRandomItemFromListByTier(List<Item> itemList, int chestTier) {

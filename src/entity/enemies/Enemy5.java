@@ -9,9 +9,9 @@ public class Enemy5 extends Enemy {
         super(x, y);
         w = 15;
         l = 15;
-        hp = 5;
-        maxHp = 5;
-        damage = 1.0;
+        hp = 50;
+        maxHp = 50;
+        damage = 10.0;
         speed = 3.0;
         color = Color.YELLOW;
         ranged = true;

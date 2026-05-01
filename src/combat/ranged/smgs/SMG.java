@@ -7,7 +7,7 @@ public class SMG extends Ranged {
     public SMG() {
         // base SMG stats: very fast fire rate, low damage, medium-low accuracy
         fireRate = 0.08; // seconds between shots (very fast)
-        damage = 2;
+        damage = 20;
         accuracy = 0.75;
         accuracyAngle = 25.0; // ±25 degrees spread
         magazineSize = 25;
@@ -25,7 +25,7 @@ public class SMG extends Ranged {
         super(tier);
         // base SMG stats: very fast fire rate, low damage, medium-low accuracy
         fireRate = 0.08; // seconds between shots (very fast)
-        damage = 8;
+        damage = 80;
         accuracy = 0.75;
         accuracyAngle = 25.0; // ±25 degrees spread
         magazineSize = 25;

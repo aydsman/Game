@@ -18,6 +18,7 @@ public class Ranged extends Item {
     protected String projectileColor; // color of the projectile (e.g., "red", "blue", "white")
     protected int barrelLength; // length of the barrel (horizontal, extends right from center)
     protected int barrelHeight; // height of the barrel (vertical, centered on dot)
+    protected double bulletSpeed; // speed of projectiles
     protected boolean isReloading = false; // reload state
     protected long reloadStartTime = 0; // when reload started
 
@@ -25,12 +26,13 @@ public class Ranged extends Item {
         super();
         // default stats (can be overridden by subclasses)
         fireRate = 0.5;
-        damage = 10;
+        damage = 1000;
         accuracy = 0.8;
         accuracyAngle = 15.0; // ±15 degrees spread
         magazineSize = 10;
         reloadTime = 2.0;
         currentAmmo = magazineSize;
+        bulletSpeed = 10.0; // default bullet speed
 
         // default visual properties (can be overridden by subclasses)
         barrelColor = "black";
@@ -45,12 +47,13 @@ public class Ranged extends Item {
         super(tier);
         // default stats (can be overridden by subclasses)
         fireRate = 0.5;
-        damage = 10;
+        damage = 1000;
         accuracy = 0.8;
         accuracyAngle = 15.0; // ±15 degrees spread
         magazineSize = 10;
         reloadTime = 2.0;
         currentAmmo = magazineSize;
+        bulletSpeed = 10.0; // default bullet speed
 
         // default visual properties (can be overridden by subclasses)
         barrelColor = "black";
@@ -154,7 +157,7 @@ public class Ranged extends Item {
 
         // Create projectile at barrel tip with final angle and weapon damage
         Color projectileColor = getProjectileColor();
-        Projectile projectile = new Projectile(tip[0], tip[1], projectileColor, 10.0, finalAngle, damage);
+        Projectile projectile = new Projectile(tip[0], tip[1], projectileColor, bulletSpeed, finalAngle, damage);
         projectiles.add(projectile);
 
         return projectiles;

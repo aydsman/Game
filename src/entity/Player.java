@@ -18,6 +18,9 @@ public class Player extends Entity {
     private long gameStartTime;
     private boolean canShoot = false;
     private PlayerStats stats = new PlayerStats();
+    private combat.Inventory inventory = new combat.Inventory();
+    private double baseHp; // Base HP before charm effects
+    private double baseMaxHp; // Base max HP before charm effects
 
     public Player(int x, int y) {
         super(x, y);
@@ -29,8 +32,10 @@ public class Player extends Entity {
     // player spawn
     public void playerSpawn() {
         // health
-        hp = 50;
-        maxHp = 50;
+        hp = 200;
+        maxHp = 200;
+        baseHp = 200;
+        baseMaxHp = 200;
         dead = false;
         // multipliers
         damage = 1.0;
@@ -53,13 +58,28 @@ public class Player extends Entity {
         for (int i = 0; i < 5; i++) {
             hotbar.add(null);
         }
-        // Set starting items in slots 0, 1, and 2
+        // Set starting item in slot 0 only
         hotbar.set(0, new combat.ranged.pistols.Pistol1(1));
-        hotbar.set(1, new combat.melee.swords.Sword1(1));
-        hotbar.set(2, new combat.consumables.Consumable1(1));
 
         // Equip first hotbar slot by default
         equipHotbarSlot(0);
+
+        // Set player reference in inventory for charm effects
+        inventory.setPlayer(this);
+    }
+
+    // Recalculate HP based on number of equipped combat.charms (additive stacking)
+    public void recalculateCharmEffects() {
+        int charmCount = 0;
+        for (int i = 0; i < inventory.getMaxCharms(); i++) {
+            if (inventory.getCharm(i) != null) {
+                charmCount++;
+            }
+        }
+        // Each charm adds 10% of base HP
+        double totalBoost = charmCount * 0.1;
+        setHp((int)(baseHp + (baseHp * totalBoost)));
+        setMaxHp((int)(baseMaxHp + (baseMaxHp * totalBoost)));
     }
 
     public void resetMouseClicks(MouseHandler mouse) {
@@ -207,6 +227,9 @@ public class Player extends Entity {
         return stats;
     }
 
+    public double getBaseHp() { return baseHp; }
+    public double getBaseMaxHp() { return baseMaxHp; }
+
     public void updateProjectiles() {
         for (Projectile p : projectiles) {
             p.update();
@@ -257,6 +280,10 @@ public class Player extends Entity {
 
     public ArrayList<Object> getHotbar() {
         return hotbar;
+    }
+
+    public combat.Inventory getInventory() {
+        return inventory;
     }
 
     public void equipHotbarSlot(int slot) {

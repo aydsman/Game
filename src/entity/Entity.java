@@ -35,6 +35,9 @@ public class Entity {
     public double getSpeed() { return speed; }
     public double getHp() { return hp; }
     public double getMaxHp() { return maxHp; }
+    public double getDamage() { return damage; }
+    public void setHp(double hp) { this.hp = hp; }
+    public void setMaxHp(double maxHp) { this.maxHp = maxHp; }
     public int getCenterX() { return x + w / 2; }
     public int getCenterY() { return y + l / 2; }
     public boolean isDead() { return dead; }

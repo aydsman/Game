@@ -1,8 +1,8 @@
-# SummerGame Class Documentation
+# Abyss Class Documentation
 
-**Total Classes:** 51
+**Total Classes:** 96
 
-**Total Lines of Code:** 5,480
+**Total Lines of Code:** 7,832
 
 ## Table of Contents
 
@@ -14,16 +14,16 @@
   - [Melee.java](#meleejava-extends-item)
   - [Ranged.java](#rangedjava-extends-item)
   - [Projectile.java](#projectilejava)
-  - [charms/](#charms)
+  - [combat.charms/](#charms)
     - [Charm.java](#charmjava-extends-item)
     - [Charm1.java](#charm1java-extends-charm)
   - [summons/](#summons)
     - [Summon.java](#summonjava-extends-item)
     - [Summon1.java](#summon1java-extends-summon)
-  - [powers/](#powers)
+  - [combat.powers/](#powers)
     - [Power.java](#powerjava-extends-item)
     - [Power1.java](#power1java-extends-power)
-  - [consumables/](#consumables)
+  - [combat.consumables/](#consumables)
     - [Consumable.java](#consumablejava-extends-item)
     - [Consumable1.java](#consumable1java-extends-consumable)
 - [combat/melee/](#combatmelee)
@@ -131,20 +131,20 @@
 **Fields:**
 - `allItems` (List<Item>) - All registered items
 - `weapons` (List<Item>) - Weapon items
-- `charms` (List<Item>) - Charm items
+- `combat.charms` (List<Item>) - Charm items
 - `summons` (List<Item>) - Summon items
-- `powers` (List<Item>) - Power items
-- `consumables` (List<Item>) - Consumable items
+- `combat.powers` (List<Item>) - Power items
+- `combat.consumables` (List<Item>) - Consumable items
 - `LOOT_TABLE` (double[][]) - Chest tier probabilities
 
 **Methods:**
 - `ItemRegistry()` - Constructor, registers all items
 - `getAllItems()` - Returns all items
 - `getWeapons()` - Returns weapons list
-- `getCharms()` - Returns charms list
+- `getCharms()` - Returns combat.charms list
 - `getSummons()` - Returns summons list
-- `getPowers()` - Returns powers list
-- `getConsumables()` - Returns consumables list
+- `getPowers()` - Returns combat.powers list
+- `getConsumables()` - Returns combat.consumables list
 - `getItemsByTier(int tier)` - Returns items of specific tier
 - `getRandomItem()` - Returns random item
 - `getRandomItemForChest(int chestTier)` - Returns random item based on chest tier loot table
@@ -241,7 +241,7 @@
 
 ---
 
-## combat/charms/
+## combat/combat.charms/
 
 ### Charm.java (extends Item)
 - `Charm()` - Default constructor
@@ -265,7 +265,7 @@
 
 ---
 
-## combat/powers/
+## combat/combat.powers/
 
 ### Power.java (extends Item)
 - `Power()` - Default constructor
@@ -277,7 +277,7 @@
 
 ---
 
-## combat/consumables/
+## combat/combat.consumables/
 
 ### Consumable.java (extends Item)
 - `Consumable()` - Default constructor

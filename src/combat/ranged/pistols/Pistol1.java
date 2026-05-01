@@ -18,6 +18,8 @@ public class Pistol1 extends Pistol {
         projectileColor = "white";
         barrelLength = 40; // shorter barrel for starter pistol
         barrelHeight = 14; // smaller height (7 above, 7 below center)
-        name = "Pistol1";
+        name = "Glock";
+        iconPath = "assets/items/ranged/pistols/glock.png";
+        description = "This pistol is reliable and easy to use, with moderate damage and fire rate.";
     }
 }

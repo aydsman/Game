@@ -7,7 +7,7 @@ public class Dagger extends Melee {
     public Dagger() {
         // base dagger stats: very fast attack speed, low damage, short range
         attackSpeed = 2.5; // 2.5 attacks per second
-        damage = 5;
+        damage = 50;
         range = 30.0; // 30 pixel range
         knockback = 1.0;
         name = "Dagger";
@@ -17,7 +17,7 @@ public class Dagger extends Melee {
         super(tier);
         // base dagger stats: very fast attack speed, low damage, short range
         attackSpeed = 2.5; // 2.5 attacks per second
-        damage = 5;
+        damage = 50;
         range = 30.0; // 30 pixel range
         knockback = 1.0;
         name = "Dagger";

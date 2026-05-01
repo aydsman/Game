@@ -1,11 +1,11 @@
-# SummerGame
+# Abyss
 
 A Java-based 2D action game featuring dungeon crawling, arena combat, and progression systems.
 
 ## Project Stats
 
-- **Total Classes:** 51
-- **Total Lines of Code:** 5,480
+- **Total Classes:** 96
+- **Total Lines of Code:** 7,832
 
 ## Features
 
@@ -81,10 +81,10 @@ src/
 │   │   ├── daggers/
 │   │   ├── maces/
 │   │   └── scythes/
-│   ├── charms/            # Charm items
+│   ├── combat.charms/            # Charm items
 │   ├── summons/           # Summon items
-│   ├── powers/            # Power items
-│   └── consumables/       # Consumable items
+│   ├── combat.powers/            # Power items
+│   └── combat.consumables/       # Consumable items
 ├── entity/                # Game entities
 │   ├── Entity.java        # Base class
 │   ├── Player.java

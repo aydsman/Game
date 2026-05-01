@@ -40,7 +40,7 @@ public class MenuScreen {
         g.setColor(Color.WHITE);
         g.setFont(new Font("Arial", Font.BOLD, 52));
         FontMetrics fm = g.getFontMetrics();
-        String title = "SummerGame";
+        String title = "Abyss";
         g.drawString(title, (1600 - fm.stringWidth(title)) / 2, 150);
 
         drawButton(g, arenaBtn, "Arena");
@@ -67,7 +67,7 @@ public class MenuScreen {
         g.setColor(Color.WHITE);
         g.draw(itemsBtn);
         g.setFont(new Font("Arial", Font.PLAIN, 12));
-        String itemsText = "Items";
+        String itemsText = "Gallery";
         int itemsTextX = itemsBtn.x + (itemsBtn.width - btnFm.stringWidth(itemsText)) / 2;
         int itemsTextY = itemsBtn.y + (itemsBtn.height + btnFm.getAscent() - btnFm.getDescent()) / 2;
         g.drawString(itemsText, itemsTextX, itemsTextY);

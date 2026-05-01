@@ -10,7 +10,7 @@ import java.awt.Rectangle;
 public class SettingsScreen {
 
     private GamePanel gamePanel;
-    private Rectangle backBtn = new Rectangle(10, 520, 120, 50);
+    private Rectangle backBtn = new Rectangle(10, 840, 120, 50);
 
     public SettingsScreen(GamePanel gamePanel) {
         this.gamePanel = gamePanel;
@@ -20,9 +20,9 @@ public class SettingsScreen {
         if (backBtn.contains(x, y)) gamePanel.switchScreen("menu");
     }
 
-    public void draw(Graphics2D g) {
+    public void draw(Graphics2D g, int width, int height) {
         g.setColor(new Color(30, 30, 30));
-        g.fillRect(0, 0, 800, 600);
+        g.fillRect(0, 0, width, height);
 
         g.setColor(Color.WHITE);
         g.setFont(new Font("Arial", Font.BOLD, 36));

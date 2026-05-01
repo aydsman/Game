@@ -1,9 +1,13 @@
 package ui.screens;
 
+import combat.charms.Charm;
 import entity.EnemyManager;
 import entity.Player;
+import combat.powers.Power;
+import combat.powers.Move;
 import ui.HUD;
 import ui.ChestUI;
+import ui.InventoryScreen;
 import util.Camera;
 import util.KeyHandler;
 import util.MouseHandler;
@@ -22,6 +26,7 @@ public class GameScreen {
     Camera camera = new Camera();
     HUD hud = new HUD();
     ChestUI chestUI = new ChestUI();
+    InventoryScreen inventoryScreen = new InventoryScreen();
     EnemyManager enemyManager = new EnemyManager();
     WaveManager waveManager;
     ArrayList<Chest> chests = new ArrayList<>();
@@ -31,15 +36,24 @@ public class GameScreen {
     int dragSourceSlot = -1;
     boolean wasLeftPressedLastFrame = false;
     boolean ePressedLastFrame = false;
+    boolean inventoryOpen = false;
+    boolean tabPressedLastFrame = false;
+    boolean onePressedLastFrame = false;
+    boolean twoPressedLastFrame = false;
+    boolean threePressedLastFrame = false;
+    boolean fourPressedLastFrame = false;
     private int lastMouseX = 0;
     private int lastMouseY = 0;
     private boolean debugMode = false;
-    private boolean wavesEnabled = true; // Set to false to disable waves for debugging
+    private boolean wavesEnabled = false; // Disable waves for testing
     private boolean statsPanelVisible = false; // Toggle with U key for debugging
 
     public GameScreen() {
         waveManager = new WaveManager(enemyManager, player, arena.getWidth(), arena.getHeight());
         waveManager.setEnabled(wavesEnabled);
+
+        // Give player Fire power for testing
+        player.getInventory().equipPower(new combat.powers.Fire());
 
         // spawning enemies
         /*enemyManager.spawnEnemy(500, 1000, 1);
@@ -48,7 +62,7 @@ public class GameScreen {
         enemyManager.spawnEnemy(1800, 9, 1);
         enemyManager.spawnEnemy(1000, 500, 2);*/
 
-        // Chests removed - waves enabled
+        // Chests spawn via waves
     }
 
     public void resetMouseClicks(MouseHandler mouse) {
@@ -71,6 +85,9 @@ public class GameScreen {
             statsPanelVisible = !statsPanelVisible;
             key.uPressed = false;
         }
+
+        // Handle power moves with keys 1-4
+        handlePowerMoves(key);
 
         // Kill all enemies with K key (debug)
         if (key.kPressed) {
@@ -97,33 +114,77 @@ public class GameScreen {
                 if (activeChest == closestChest) {
                     activeChest.setOpen(false);
                     activeChest = null;
+                    inventoryOpen = false; // Close inventory when closing chest
                 } else {
                     if (activeChest != null) {
                         activeChest.setOpen(false);
                     }
                     activeChest = closestChest;
                     activeChest.setOpen(true);
+                    inventoryOpen = true; // Open inventory when opening chest
                 }
             } else if (activeChest != null) {
                 activeChest.setOpen(false);
                 activeChest = null;
+                inventoryOpen = false; // Close inventory when closing chest
             }
         }
         ePressedLastFrame = key.ePressed;
 
+        // Handle inventory toggle with Tab key
+        if (key.tabPressed && !tabPressedLastFrame) {
+            inventoryOpen = !inventoryOpen;
+            // Close chest if opening inventory
+            if (inventoryOpen && activeChest != null) {
+                activeChest.setOpen(false);
+                activeChest = null;
+            }
+        }
+        tabPressedLastFrame = key.tabPressed;
+
+        // Update power key states
+        onePressedLastFrame = key.onePressed;
+        twoPressedLastFrame = key.twoPressed;
+        threePressedLastFrame = key.threePressed;
+        fourPressedLastFrame = key.fourPressed;
+
         // Update chest range status and auto-close if out of range
         updateChestRanges();
+
+        // Update chest hover
+        if (activeChest != null && activeChest.isOpen()) {
+            int chestX = activeChest.getX() - (int)camera.x;
+            int chestY = activeChest.getY() - (int)camera.y;
+            int chestSlot = chestUI.getSlotAtPosition(mouse.mouseX, mouse.mouseY, activeChest, chestX, chestY);
+            chestUI.setHoveredSlot(chestSlot);
+        } else {
+            chestUI.setHoveredSlot(-1);
+        }
 
         // Store mouse position for draw method
         lastMouseX = mouse.mouseX;
         lastMouseY = mouse.mouseY;
 
+        // Update inventory hover
+        if (inventoryOpen) {
+            int playerScreenX = player.getCenterX() - camera.x;
+            int playerScreenY = player.getCenterY() - camera.y;
+            int chestX = (activeChest != null && activeChest.isOpen()) ? activeChest.getX() - (int)camera.x : 0;
+            int chestY = (activeChest != null && activeChest.isOpen()) ? activeChest.getY() - (int)camera.y : 0;
+            boolean chestOpen = (activeChest != null && activeChest.isOpen());
+            inventoryScreen.updatePositions(playerScreenX, playerScreenY, screenWidth, screenHeight, chestX, chestY, chestOpen);
+            int invSlot = inventoryScreen.getSlotAtPosition(mouse.mouseX, mouse.mouseY);
+            inventoryScreen.setHoveredSlot(invSlot);
+        } else {
+            inventoryScreen.setHoveredSlot(-1);
+        }
+
         // Handle mouse drag and drop
         handleDragAndDrop(mouse.leftPressed, mouse.leftClicked, mouse.mouseX, mouse.mouseY, screenWidth, screenHeight);
 
-        // Temporarily disable shooting when chest is open or dragging
+        // Temporarily disable shooting when chest is open, inventory is open, or dragging
         boolean wasLeftPressed = mouse.leftPressed;
-        if ((activeChest != null && activeChest.isOpen()) || draggedItem != null) {
+        if ((activeChest != null && activeChest.isOpen()) || inventoryOpen || draggedItem != null) {
             mouse.leftClicked = false;
             mouse.leftPressed = false;
         }
@@ -223,7 +284,20 @@ public class GameScreen {
             chestUI.draw(g, activeChest, activeChest.getX() - (int)camera.x, activeChest.getY() - (int)camera.y, screenWidth, screenHeight);
         }
 
+        // Draw inventory UI if open
+        if (inventoryOpen) {
+            int playerScreenX = player.getCenterX() - camera.x;
+            int playerScreenY = player.getCenterY() - camera.y;
+            int chestX = (activeChest != null && activeChest.isOpen()) ? activeChest.getX() - (int)camera.x : 0;
+            int chestY = (activeChest != null && activeChest.isOpen()) ? activeChest.getY() - (int)camera.y : 0;
+            boolean chestOpen = (activeChest != null && activeChest.isOpen());
+            inventoryScreen.draw(g, player.getInventory(), playerScreenX, playerScreenY, screenWidth, screenHeight, chestX, chestY, chestOpen);
+        }
+
         hud.draw(g, player, screenWidth, screenHeight);
+
+        // Draw power moves UI if power is equipped
+        drawPowerMovesUI(g, screenWidth, screenHeight);
 
         // Draw player projectiles
         for (combat.Projectile p : player.getProjectiles()) {
@@ -253,6 +327,25 @@ public class GameScreen {
         int textWidth = fm.stringWidth(debugStatus);
         g.drawString(debugStatus, screenWidth - textWidth - 10, 20);
 
+        // Draw debug commands when debug mode is on (bottom right)
+        if (debugMode) {
+            g.setColor(new Color(255, 255, 0, 200)); // Yellow, semi-transparent
+            g.setFont(new java.awt.Font("Arial", java.awt.Font.PLAIN, 12));
+            String[] commands = {
+                "DEBUG COMMANDS:",
+                "K - Kill all enemies",
+                "U - Toggle stats panel",
+                "O - Toggle debug mode",
+                "F - Skip grace period"
+            };
+            int cmdY = screenHeight - 100;
+            for (String cmd : commands) {
+                int cmdTextWidth = fm.stringWidth(cmd);
+                g.drawString(cmd, screenWidth - cmdTextWidth - 10, cmdY);
+                cmdY += 16;
+            }
+        }
+
         // Draw wave number (top right, below debug status)
         g.setColor(Color.WHITE);
         g.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 18));
@@ -269,7 +362,7 @@ public class GameScreen {
 
         // Draw stats panel if visible (bottom left corner)
         if (statsPanelVisible) {
-            drawStatsPanel(g, 10, screenHeight - 160);
+            drawStatsPanel(g, 10, screenHeight - 190);
         }
 
     }
@@ -277,9 +370,20 @@ public class GameScreen {
     private void drawStatsPanel(Graphics2D g, int x, int y) {
         entity.PlayerStats stats = player.getStats();
 
+        // Calculate multipliers
+        int charmCount = 0;
+        for (int i = 0; i < player.getInventory().getMaxCharms(); i++) {
+            if (player.getInventory().getCharm(i) != null) {
+                charmCount++;
+            }
+        }
+        int hpMultiplier = charmCount * 10; // Each charm gives 10%
+        double damageMultiplier = (player.getDamage() - 1.0) * 100; // Convert to percentage
+        double speedMultiplier = (player.getSpeed() - 7.0) / 7.0 * 100; // Base speed is 7.0
+
         // Panel background
         int panelWidth = 200;
-        int panelHeight = 140;
+        int panelHeight = 180;
         g.setColor(new Color(0, 0, 0, 180));
         g.fillRect(x, y, panelWidth, panelHeight);
         g.setColor(Color.WHITE);
@@ -294,6 +398,14 @@ public class GameScreen {
         int lineY = y + 40;
         int lineHeight = 16;
 
+        g.drawString("HP Multiplier: +" + hpMultiplier + "%", x + 10, lineY);
+        lineY += lineHeight;
+        g.drawString("Damage Multiplier: +" + (int)damageMultiplier + "%", x + 10, lineY);
+        lineY += lineHeight;
+        g.drawString("Speed Multiplier: +" + (int)speedMultiplier + "%", x + 10, lineY);
+        lineY += lineHeight;
+        g.drawString("---", x + 10, lineY);
+        lineY += lineHeight;
         g.drawString("Kills: " + stats.getKills(), x + 10, lineY);
         lineY += lineHeight;
         g.drawString("Deaths: " + stats.getDeaths(), x + 10, lineY);
@@ -367,12 +479,14 @@ public class GameScreen {
             if (activeChest == chest && !chest.isInRange()) {
                 chest.setOpen(false);
                 activeChest = null;
+                inventoryOpen = false; // Close inventory when walking away from chest
             }
         }
     }
 
     private void handleDragAndDrop(boolean leftPressed, boolean leftClicked, int mouseX, int mouseY, int screenWidth, int screenHeight) {
-        if (activeChest == null || !activeChest.isOpen() || !activeChest.isInRange()) {
+        // Reset drag if neither chest nor inventory is open
+        if ((activeChest == null || !activeChest.isOpen() || !activeChest.isInRange()) && !inventoryOpen) {
             draggedItem = null;
             dragSource = -1;
             dragSourceSlot = -1;
@@ -391,7 +505,7 @@ public class GameScreen {
                 }
             }
 
-            if (draggedItem == null) {
+            if (draggedItem == null && activeChest != null && activeChest.isOpen()) {
                 int chestX = activeChest.getX() - (int)camera.x;
                 int chestY = activeChest.getY() - (int)camera.y;
                 int chestSlot = chestUI.getSlotAtPosition(mouseX, mouseY, activeChest, chestX, chestY);
@@ -400,6 +514,45 @@ public class GameScreen {
                     if (draggedItem != null) {
                         dragSource = 0;
                         dragSourceSlot = chestSlot;
+                    }
+                }
+            }
+
+            // Check inventory slots for drag start
+            if (draggedItem == null && inventoryOpen) {
+                // Update positions before checking slot positions
+                int playerScreenX = player.getCenterX() - camera.x;
+                int playerScreenY = player.getCenterY() - camera.y;
+                int chestX = (activeChest != null && activeChest.isOpen()) ? activeChest.getX() - (int)camera.x : 0;
+            int chestY = (activeChest != null && activeChest.isOpen()) ? activeChest.getY() - (int)camera.y : 0;
+            boolean chestOpen = (activeChest != null && activeChest.isOpen());
+            inventoryScreen.updatePositions(playerScreenX, playerScreenY, screenWidth, screenHeight, chestX, chestY, chestOpen);
+                int invSlot = inventoryScreen.getSlotAtPosition(mouseX, mouseY);
+                if (invSlot >= 0 && invSlot <= 4) {
+                    if (invSlot >= 0 && invSlot <= 2) {
+                        // Charm slot
+                        Charm charm = player.getInventory().getCharm(invSlot);
+                        if (charm != null) {
+                            draggedItem = charm;
+                            dragSource = 1; // 1 = inventory charm
+                            dragSourceSlot = invSlot;
+                        }
+                    } else if (invSlot == 3) {
+                        // Power slot
+                        Power power = player.getInventory().getPower();
+                        if (power != null) {
+                            draggedItem = power;
+                            dragSource = 2; // 2 = inventory power
+                            dragSourceSlot = invSlot;
+                        }
+                    } else if (invSlot == 4) {
+                        // Summon slot
+                        combat.summons.Summon summon = player.getInventory().getSummon();
+                        if (summon != null) {
+                            draggedItem = summon;
+                            dragSource = 3; // 3 = inventory summon
+                            dragSourceSlot = invSlot;
+                        }
                     }
                 }
             }
@@ -442,11 +595,97 @@ public class GameScreen {
                     player.getHotbar().set(dragSourceSlot, destItem);
                     player.getHotbar().set(inventorySlot, draggedItem);
                     placed = true;
+                } else if (dragSource >= 1 && dragSource <= 3) {
+                    // From inventory slots to hotbar
+                    Object destItem = player.getHotbar().get(inventorySlot);
+                    if (destItem == null) {
+                        player.getHotbar().set(inventorySlot, draggedItem);
+                        removeFromInventorySlot(dragSource, dragSourceSlot);
+                        placed = true;
+                    }
+                    // If destination is occupied, don't allow drop (no stacking)
+                }
+            }
+
+            // Check inventory slots (charm/power/summon)
+            if (!placed && inventoryOpen) {
+                // Update positions before checking slot positions
+                int playerScreenX = player.getCenterX() - camera.x;
+                int playerScreenY = player.getCenterY() - camera.y;
+                int chestX = (activeChest != null && activeChest.isOpen()) ? activeChest.getX() - (int)camera.x : 0;
+            int chestY = (activeChest != null && activeChest.isOpen()) ? activeChest.getY() - (int)camera.y : 0;
+            boolean chestOpen = (activeChest != null && activeChest.isOpen());
+            inventoryScreen.updatePositions(playerScreenX, playerScreenY, screenWidth, screenHeight, chestX, chestY, chestOpen);
+                int invSlot = inventoryScreen.getSlotAtPosition(mouseX, mouseY);
+                if (invSlot >= 0 && invSlot <= 4 && inventoryScreen.isValidDrop(invSlot, draggedItem)) {
+                    if (dragSource == -1) {
+                        // From hotbar to inventory
+                        if (invSlot >= 0 && invSlot <= 2) {
+                            // Charm slot - only allow if empty
+                            if (player.getInventory().getCharm(invSlot) == null) {
+                                player.getInventory().equipCharm(invSlot, (Charm) draggedItem);
+                                player.getHotbar().set(dragSourceSlot, null);
+                                placed = true;
+                            }
+                        } else if (invSlot == 3) {
+                            // Power slot - only allow if empty
+                            if (player.getInventory().getPower() == null) {
+                                player.getInventory().equipPower((Power) draggedItem);
+                                player.getHotbar().set(dragSourceSlot, null);
+                                placed = true;
+                            }
+                        } else if (invSlot == 4) {
+                            // Summon slot - only allow if empty
+                            if (player.getInventory().getSummon() == null) {
+                                player.getInventory().equipSummon((combat.summons.Summon) draggedItem);
+                                player.getHotbar().set(dragSourceSlot, null);
+                                placed = true;
+                            }
+                        }
+                    } else if (dragSource == 0) {
+                        // From chest to inventory
+                        if (invSlot >= 0 && invSlot <= 2) {
+                            // Charm slot - only allow if empty
+                            if (player.getInventory().getCharm(invSlot) == null) {
+                                player.getInventory().equipCharm(invSlot, (Charm) draggedItem);
+                                activeChest.setItem(dragSourceSlot, null);
+                                placed = true;
+                            }
+                        } else if (invSlot == 3) {
+                            // Power slot - only allow if empty
+                            if (player.getInventory().getPower() == null) {
+                                player.getInventory().equipPower((Power) draggedItem);
+                                activeChest.setItem(dragSourceSlot, null);
+                                placed = true;
+                            }
+                        } else if (invSlot == 4) {
+                            // Summon slot - only allow if empty
+                            if (player.getInventory().getSummon() == null) {
+                                player.getInventory().equipSummon((combat.summons.Summon) draggedItem);
+                                activeChest.setItem(dragSourceSlot, null);
+                                placed = true;
+                            }
+                        }
+                    } else if (dragSource >= 1 && dragSource <= 3 && invSlot != dragSourceSlot) {
+                        // Between inventory slots - only allow if destination is empty
+                        if (invSlot >= 0 && invSlot <= 2 && dragSource == 1) {
+                            // Charm to charm - only if empty
+                            if (player.getInventory().getCharm(invSlot) == null) {
+                                player.getInventory().removeCharm(dragSourceSlot);
+                                player.getInventory().equipCharm(invSlot, (Charm) draggedItem);
+                                placed = true;
+                            }
+                        } else if (invSlot == 3 && dragSource == 2) {
+                            // Power to power (only one slot, so this shouldn't happen)
+                        } else if (invSlot == 4 && dragSource == 3) {
+                            // Summon to summon (only one slot, so this shouldn't happen)
+                        }
+                    }
                 }
             }
 
             // Check chest slots with overlap
-            if (!placed) {
+            if (!placed && activeChest != null && activeChest.isOpen()) {
                 int chestX = activeChest.getX() - (int)camera.x;
                 int chestY = activeChest.getY() - (int)camera.y;
                 int chestSlot = chestUI.getSlotAtPosition(mouseX, mouseY, activeChest, chestX, chestY);
@@ -524,6 +763,40 @@ public class GameScreen {
             }
         }
         return -1;
+    }
+
+    private void removeFromInventorySlot(int dragSource, int dragSourceSlot) {
+        if (dragSource == 1) {
+            // Charm slot
+            player.getInventory().removeCharm(dragSourceSlot);
+        } else if (dragSource == 2) {
+            // Power slot
+            player.getInventory().removePower();
+        } else if (dragSource == 3) {
+            // Summon slot
+            player.getInventory().removeSummon();
+        }
+    }
+
+    private void placeInInventorySlot(combat.Item item, int dragSource, int dragSourceSlot) {
+        if (dragSource == 1 && item instanceof Charm) {
+            player.getInventory().equipCharm(dragSourceSlot, (Charm) item);
+        } else if (dragSource == 2 && item instanceof Power) {
+            player.getInventory().equipPower((Power) item);
+        } else if (dragSource == 3 && item instanceof combat.summons.Summon) {
+            player.getInventory().equipSummon((combat.summons.Summon) item);
+        }
+    }
+
+    private boolean canPlaceInInventorySlot(combat.Item item, int dragSource, int dragSourceSlot) {
+        if (dragSource == 1) {
+            return item instanceof Charm;
+        } else if (dragSource == 2) {
+            return item instanceof Power;
+        } else if (dragSource == 3) {
+            return item instanceof combat.summons.Summon;
+        }
+        return false;
     }
 
     private void checkMeleeCollisions(Player player, entity.EnemyManager enemyManager) {
@@ -628,6 +901,81 @@ public class GameScreen {
                 g.setColor(Color.RED);
                 g.drawLine(playerX, playerY, lineEndX, lineEndY);
             }
+        }
+    }
+
+    private void handlePowerMoves(util.KeyHandler key) {
+        // Only process if a power is equipped
+        Power equippedPower = player.getInventory().getPower();
+        if (equippedPower == null) return;
+
+        // Handle key presses 1-4 for power moves
+        if (key.onePressed && !onePressedLastFrame) {
+            equippedPower.useMove(1);
+        }
+        if (key.twoPressed && !twoPressedLastFrame) {
+            equippedPower.useMove(2);
+        }
+        if (key.threePressed && !threePressedLastFrame) {
+            equippedPower.useMove(3);
+        }
+        if (key.fourPressed && !fourPressedLastFrame) {
+            equippedPower.useMove(4);
+        }
+    }
+
+    private void drawPowerMovesUI(Graphics2D g, int screenWidth, int screenHeight) {
+        // Only draw if a power is equipped
+        Power equippedPower = player.getInventory().getPower();
+        if (equippedPower == null) return;
+
+        int maxMoves = equippedPower.getMaxMoves();
+        if (maxMoves <= 0) return;
+
+        // Box dimensions
+        int boxWidth = 200;
+        int boxHeight = 40;
+        int boxSpacing = 5;
+        int padding = 20;
+
+        // Starting position (bottom-right corner)
+        int startX = screenWidth - boxWidth - padding;
+
+        // Draw from top to bottom (highest slot first)
+        for (int i = maxMoves; i >= 1; i--) {
+            Move move = equippedPower.getMove(i);
+            if (move == null) continue;
+
+            // Calculate Y position (slot maxMoves at top, slot 1 at bottom)
+            int slotIndexFromBottom = maxMoves - i;
+            int y = screenHeight - padding - boxHeight - (slotIndexFromBottom * (boxHeight + boxSpacing));
+
+            // Draw box background
+            g.setColor(new Color(50, 50, 70, 200)); // Semi-transparent dark blue
+            g.fillRect(startX, y, boxWidth, boxHeight);
+
+            // Draw box border
+            g.setColor(Color.WHITE);
+            g.drawRect(startX, y, boxWidth, boxHeight);
+
+            // Draw move name
+            g.setFont(new java.awt.Font("Arial", java.awt.Font.PLAIN, 16));
+            g.setColor(Color.WHITE);
+            String moveName = move.getName();
+            g.drawString(moveName, startX + 10, y + 26);
+
+            // Draw slot number on the right side
+            g.setColor(new Color(100, 100, 150));
+            g.fillRect(startX + boxWidth - 30, y, 30, boxHeight);
+            g.setColor(Color.WHITE);
+            g.drawRect(startX + boxWidth - 30, y, 30, boxHeight);
+
+            // Center the number
+            String number = String.valueOf(i);
+            java.awt.FontMetrics fm = g.getFontMetrics();
+            int numberWidth = fm.stringWidth(number);
+            int numberX = startX + boxWidth - 15 - (numberWidth / 2);
+            g.drawString(number, numberX, y + 26);
         }
     }
 }

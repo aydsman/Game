@@ -17,10 +17,10 @@ public class Enemy extends Entity {
     public Enemy(int x, int y) {
         super(x, y);
         // health
-        hp = 10;
-        maxHp = 10;
+        hp = 100;
+        maxHp = 100;
         // multipliers
-        damage = 1.0;
+        damage = 10.0;
         speed = 4.0;
         // combat
         ranged = true;

@@ -29,7 +29,7 @@ public class Melee extends Item {
         super();
         // default melee stats (can be overridden by subclasses)
         attackSpeed = 1.0; // 1 attack per second
-        damage = 15;
+        damage = 1500;
         range = 50.0; // 50 pixel range
         knockback = 5.0;
 
@@ -44,7 +44,7 @@ public class Melee extends Item {
         super(tier);
         // default melee stats (can be overridden by subclasses)
         attackSpeed = 1.0; // 1 attack per second
-        damage = 15;
+        damage = 1500;
         range = 50.0; // 50 pixel range
         knockback = 5.0;
 

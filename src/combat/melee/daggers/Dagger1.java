@@ -9,8 +9,10 @@ public class Dagger1 extends Dagger {
     public Dagger1(int tier) {
         super(tier);
         // Dagger1 specific stats (basic starter dagger)
-        damage = 10;
+        damage = 100;
         attackSpeed = 2.0;
         name = "Dagger1";
+        // Re-apply tier multipliers after setting base stats
+        applyTierMultipliers();
     }
 }

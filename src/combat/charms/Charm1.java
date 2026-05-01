@@ -7,7 +7,8 @@ public class Charm1 extends Charm {
 
     public Charm1(int tier) {
         super(tier);
-        name = "Charm1";
+        name = "Simple Health Charm";
+        description = "A basic charm that adds +10% to your health.";
         applyTierMultipliers();
     }
 

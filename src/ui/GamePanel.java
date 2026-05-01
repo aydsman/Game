@@ -82,6 +82,7 @@ public class GamePanel extends JPanel implements Runnable {
             if (showItems) itemGalleryScreen.handleMouseScroll(e.getWheelRotation());
         });
         setFocusable(true);
+        setFocusTraversalKeysEnabled(false);
         gameThread = new Thread(this);
         gameThread.start();
     }
@@ -168,9 +169,9 @@ public class GamePanel extends JPanel implements Runnable {
         if (showMenu)         menuScreen.draw(g2);
         if (showGame)         gameScreen.draw(g2, SCREEN_WIDTH, SCREEN_HEIGHT);
         if (showPause)        pauseScreen.draw(g2);
-        if (showCustomize)    customizeScreen.draw(g2);
-        if (showSettings)     settingsScreen.draw(g2);
-        if (showHelp)         helpScreen.draw(g2);
+        if (showCustomize)    customizeScreen.draw(g2, SCREEN_WIDTH, SCREEN_HEIGHT);
+        if (showSettings)     settingsScreen.draw(g2, SCREEN_WIDTH, SCREEN_HEIGHT);
+        if (showHelp)         helpScreen.draw(g2, SCREEN_WIDTH, SCREEN_HEIGHT);
         if (showGraphTest)    graphTestScreen.draw(g2);
         if (showItems)        itemGalleryScreen.draw(g2);
         if (showDungeonArena) dungeonArenaScreen.draw(g2, SCREEN_WIDTH, SCREEN_HEIGHT);
