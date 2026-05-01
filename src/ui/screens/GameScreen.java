@@ -45,15 +45,12 @@ public class GameScreen {
     private int lastMouseX = 0;
     private int lastMouseY = 0;
     private boolean debugMode = false;
-    private boolean wavesEnabled = false; // Disable waves for testing
+    private boolean wavesEnabled = true; // Enable waves
     private boolean statsPanelVisible = false; // Toggle with U key for debugging
 
     public GameScreen() {
         waveManager = new WaveManager(enemyManager, player, arena.getWidth(), arena.getHeight());
         waveManager.setEnabled(wavesEnabled);
-
-        // Give player Fire power for testing
-        player.getInventory().equipPower(new combat.powers.Fire());
 
         // Chests spawn via waves
     }
