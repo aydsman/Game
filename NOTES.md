@@ -2,8 +2,8 @@
 
 ## Project Stats
 
-- **Total Classes:** 96
-- **Total Lines of Code:** 7,832
+- **Total Classes:** 100
+- **Total Lines of Code:** 8,200+
 
 ## Legend
 - ✅ = Completed
@@ -215,6 +215,56 @@ world/
 6. **Tower Defense** - Basic towers + waves
 7. **Perk System** - After core systems work
 8. **Save/Load** - Once progression is solid
+
+---
+
+## Meta-Progression System (Collection & Loadout)
+
+### Overview
+Outside of game modes, players build a permanent collection of items and configure starting loadouts for runs.
+
+### Collection System
+- **Persistent Inventory**: Separate from run-based hotbar - items persist between runs
+- **Item Sources**:
+  - Loot boxes (Common, Rare, Epic, Legendary rarities)
+  - Mission/quest rewards
+  - Shop purchase
+  - Dungeon/arena completion rewards
+- **Categories**: Weapons, Charms, Powers, Summons, Consumables
+- **Save System**: JSON-based collection persistence
+
+### Starting Loadout Configuration
+Pre-run screen where players choose what they start with:
+
+| Slot | Default | Unlock Status | Max |
+|------|---------|---------------|-----|
+| Weapon | Pistol1 | Always 1 slot | 1 |
+| Charms | None | Starts at 1, expandable to 3 | 3 |
+| Power | None | Always 1 slot | 1 |
+| Summon | None | Always 1 slot | 1 |
+| Consumables | None | Starts at 0, expandable | 2 |
+
+### Skill Tree Expansion (Meta-Upgrades)
+- **+1 Starting Charm Slot**: Unlock 2nd then 3rd charm slot permanently
+- **+1 Starting Consumable Slot**: Start runs with 1 consumable
+- **Better Loot Box Odds**: Increased chance for higher tier drops
+- **Starting Currency**: Begin runs with bonus gold
+
+### Loot Box System
+- Earn from: beating dungeons, quests, daily login, achievements
+- Contains random items based on box rarity
+- Duplicate items can be converted to currency or crafting materials
+
+### Shop System
+- **Direct Purchase**: Buy specific items with earned currency
+- **Loot Boxes**: Cheaper but random
+- **Daily Deals**: Discounted items rotating daily
+
+### UI Screens Needed
+- **Collection Screen**: Browse all unlocked items by category
+- **Loadout Screen**: Configure starting equipment (no moving player)
+- **Shop Screen**: Purchase items and loot boxes
+- **Loot Box Opening**: Animation for revealing rewards
 
 ---
 

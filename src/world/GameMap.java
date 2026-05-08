@@ -11,9 +11,21 @@ public class GameMap {
     static final int TILE_SIZE = 128;
 
     Tile grassTile;
+    Tile hubTile;
+    private Tile currentTile;
 
     public GameMap() {
         loadTiles();
+        currentTile = grassTile;
+    }
+
+    public GameMap(String tileType) {
+        loadTiles();
+        if (tileType.equals("hub")) {
+            currentTile = hubTile;
+        } else {
+            currentTile = grassTile;
+        }
     }
 
     private void loadTiles() {
@@ -22,6 +34,12 @@ public class GameMap {
             grassTile = new Tile(grassImg);
         } catch (IOException e) {
             System.out.println("Could not load grass_tile.png");
+        }
+        try {
+            BufferedImage hubImg = ImageIO.read(new File("assets/tiles/hub_tile.png"));
+            hubTile = new Tile(hubImg);
+        } catch (IOException e) {
+            System.out.println("Could not load hub_tile.png");
         }
     }
 
@@ -33,7 +51,7 @@ public class GameMap {
 
         for (int x = startX; x < endX; x += TILE_SIZE) {
             for (int y = startY; y < endY; y += TILE_SIZE) {
-                grassTile.draw(g, x - cameraX, y - cameraY, TILE_SIZE);
+                currentTile.draw(g, x - cameraX, y - cameraY, TILE_SIZE);
             }
         }
     }

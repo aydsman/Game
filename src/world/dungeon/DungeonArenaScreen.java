@@ -34,6 +34,10 @@ public class DungeonArenaScreen {
     private combat.Item draggedItem;
     private int dragSource;
     private int dragSourceSlot;
+    private boolean paused = false;
+    private boolean pPressedLastFrame = false;
+    private static final int PAUSE_MENU_MARGIN = 150;
+    private ui.GamePanel gamePanel;
 
     public DungeonArenaScreen() {
         this.generator = new DungeonGenerator();
@@ -48,6 +52,11 @@ public class DungeonArenaScreen {
         this.dragSource = -1;
         this.dragSourceSlot = -1;
         generateLevel();
+    }
+
+    public DungeonArenaScreen(ui.GamePanel gamePanel) {
+        this();
+        this.gamePanel = gamePanel;
     }
 
     private void generateLevel() {
@@ -74,6 +83,17 @@ public class DungeonArenaScreen {
     }
 
     public void update(KeyHandler key, MouseHandler mouse, int screenWidth, int screenHeight) {
+        // Handle pause with P key
+        if (key.pPressed && !pPressedLastFrame) {
+            paused = !paused;
+        }
+        pPressedLastFrame = key.pPressed;
+
+        // If paused, skip all update logic
+        if (paused) {
+            return;
+        }
+
         // Handle hotbar scrolling
         if (mouse.scrollDirection != 0) {
             int currentSlot = hud.getInventoryUI().getSelectedSlot();
@@ -135,7 +155,7 @@ public class DungeonArenaScreen {
         player.setY(constrainedPos[1]);
 
         // Call player.update() for shooting logic (use large bounds to avoid clamping)
-        player.update(key, mouse, 10000, 10000);
+        player.handleShootingMechanics(mouse, key, false, null, 10000, 10000);
 
         // Restore position after player.update() moved it
         player.setX(constrainedPos[0]);
@@ -508,6 +528,12 @@ public class DungeonArenaScreen {
         // Draw HUD (hotbar, HP, XP)
         hud.draw(g, player, screenWidth, screenHeight);
 
+        // Draw Gold (top left)
+        g.setColor(new Color(255, 215, 0)); // Gold color
+        g.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 18));
+        String goldText = "G " + player.getCurrencyManager().getGold().getAmount();
+        g.drawString(goldText, 10, 30);
+
         // Draw level indicator (top-right corner)
         g.setColor(Color.WHITE);
         g.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 24));
@@ -519,6 +545,11 @@ public class DungeonArenaScreen {
         String advanceText = "Press L to advance";
         int advanceWidth = g.getFontMetrics().stringWidth(advanceText);
         g.drawString(advanceText, screenWidth - advanceWidth - 20, 60);
+
+        // Draw pause menu if paused
+        if (paused) {
+            drawPauseMenu(g, screenWidth, screenHeight);
+        }
     }
 
     private void drawChest(Graphics2D g, Chest chest) {
@@ -546,5 +577,148 @@ public class DungeonArenaScreen {
 
     public void resetMouseClicks(MouseHandler mouse) {
         player.resetMouseClicks(mouse);
+    }
+
+    public void handlePauseMenuClick(int mouseX, int mouseY, int screenWidth, int screenHeight) {
+        if (!paused) return;
+
+        // Calculate menu box dimensions
+        int menuWidth = screenWidth - (PAUSE_MENU_MARGIN * 2);
+        int menuHeight = screenHeight - (PAUSE_MENU_MARGIN * 2);
+        int menuX = PAUSE_MENU_MARGIN;
+        int menuY = PAUSE_MENU_MARGIN;
+
+        // Button dimensions
+        int buttonWidth = 200;
+        int buttonHeight = 50;
+        int buttonSpacing = 20;
+        int totalButtonHeight = (buttonHeight * 4) + (buttonSpacing * 3);
+        int startButtonY = menuY + (menuHeight - totalButtonHeight) / 2;
+
+        int buttonX = menuX + (menuWidth - buttonWidth) / 2;
+
+        // Resume button
+        int resumeY = startButtonY;
+        if (mouseX >= buttonX && mouseX <= buttonX + buttonWidth &&
+            mouseY >= resumeY && mouseY <= resumeY + buttonHeight) {
+            paused = false;
+            return;
+        }
+
+        // Settings button
+        int settingsY = resumeY + buttonHeight + buttonSpacing;
+        if (mouseX >= buttonX && mouseX <= buttonX + buttonWidth &&
+            mouseY >= settingsY && mouseY <= settingsY + buttonHeight) {
+            if (gamePanel != null) {
+                gamePanel.switchScreen("settings");
+            }
+            return;
+        }
+
+        // Help button
+        int helpY = settingsY + buttonHeight + buttonSpacing;
+        if (mouseX >= buttonX && mouseX <= buttonX + buttonWidth &&
+            mouseY >= helpY && mouseY <= helpY + buttonHeight) {
+            if (gamePanel != null) {
+                gamePanel.switchScreen("help");
+            }
+            return;
+        }
+
+        // Quit button
+        int quitY = helpY + buttonHeight + buttonSpacing;
+        if (mouseX >= buttonX && mouseX <= buttonX + buttonWidth &&
+            mouseY >= quitY && mouseY <= quitY + buttonHeight) {
+            if (gamePanel != null) {
+                gamePanel.switchScreen("menu");
+            }
+            return;
+        }
+    }
+
+    private void drawPauseMenu(Graphics2D g, int screenWidth, int screenHeight) {
+        // Calculate menu box dimensions
+        int menuWidth = screenWidth - (PAUSE_MENU_MARGIN * 2);
+        int menuHeight = screenHeight - (PAUSE_MENU_MARGIN * 2);
+        int menuX = PAUSE_MENU_MARGIN;
+        int menuY = PAUSE_MENU_MARGIN;
+
+        // Draw translucent background
+        g.setColor(new Color(0, 0, 0, 180));
+        g.fillRect(0, 0, screenWidth, screenHeight);
+
+        // Draw menu box
+        g.setColor(new Color(50, 50, 70, 220));
+        g.fillRect(menuX, menuY, menuWidth, menuHeight);
+        g.setColor(Color.WHITE);
+        g.drawRect(menuX, menuY, menuWidth, menuHeight);
+
+        // Draw title
+        g.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 48));
+        String title = "PAUSED";
+        java.awt.FontMetrics fm = g.getFontMetrics();
+        int titleWidth = fm.stringWidth(title);
+        int titleX = menuX + (menuWidth - titleWidth) / 2;
+        int titleY = menuY + 80;
+        g.drawString(title, titleX, titleY);
+
+        // Button dimensions
+        int buttonWidth = 200;
+        int buttonHeight = 50;
+        int buttonSpacing = 20;
+        int totalButtonHeight = (buttonHeight * 4) + (buttonSpacing * 3);
+        int startButtonY = menuY + (menuHeight - totalButtonHeight) / 2;
+
+        // Resume button
+        int settingsX = menuX + (menuWidth - buttonWidth) / 2;
+        int resumeY = startButtonY;
+        drawPauseButton(g, "Resume", settingsX, resumeY, buttonWidth, buttonHeight);
+
+        // Settings button
+        int settingsY = resumeY + buttonHeight + buttonSpacing;
+        drawPauseButton(g, "Settings", settingsX, settingsY, buttonWidth, buttonHeight);
+
+        // Help button
+        int helpY = settingsY + buttonHeight + buttonSpacing;
+        drawPauseButton(g, "Help", settingsX, helpY, buttonWidth, buttonHeight);
+
+        // Quit button
+        int quitY = helpY + buttonHeight + buttonSpacing;
+        drawPauseButton(g, "Quit", settingsX, quitY, buttonWidth, buttonHeight);
+
+        // Instructions
+        g.setFont(new java.awt.Font("Arial", java.awt.Font.PLAIN, 16));
+        String instructions = "Press P to resume";
+        int instructionsWidth = g.getFontMetrics().stringWidth(instructions);
+        int instructionsX = menuX + (menuWidth - instructionsWidth) / 2;
+        int instructionsY = menuY + menuHeight - 40;
+        g.drawString(instructions, instructionsX, instructionsY);
+    }
+
+    private void drawPauseButton(Graphics2D g, String text, int x, int y, int width, int height) {
+        // Button background
+        g.setColor(new Color(100, 100, 150, 200));
+        g.fillRect(x, y, width, height);
+
+        // Button border
+        g.setColor(Color.WHITE);
+        g.drawRect(x, y, width, height);
+
+        // Button text
+        g.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 20));
+        java.awt.FontMetrics fm = g.getFontMetrics();
+        int textWidth = fm.stringWidth(text);
+        int textHeight = fm.getAscent();
+        int textX = x + (width - textWidth) / 2;
+        int textY = y + (height + textHeight) / 2 - 5;
+        g.drawString(text, textX, textY);
+    }
+
+    public Player getPlayer() {
+        return player;
+    }
+
+    public int getCurrentLevel() {
+        return currentLevel;
     }
 }

@@ -139,6 +139,10 @@ public class Ranged extends Item {
     }
 
     public List<Projectile> shoot(int centerX, int centerY, double barrelAngle) {
+        return shoot(centerX, centerY, barrelAngle, 1.0);
+    }
+
+    public List<Projectile> shoot(int centerX, int centerY, double barrelAngle, double playerDamageMultiplier) {
         if (currentAmmo <= 0) {
             return null; // out of ammo
         }
@@ -155,9 +159,10 @@ public class Ranged extends Item {
         double randomSpread = (Math.random() - 0.5) * 2.0 * spreadRadians; // -accuracyAngle to +accuracyAngle
         double finalAngle = barrelAngle + randomSpread;
 
-        // Create projectile at barrel tip with final angle and weapon damage
+        // Create projectile at barrel tip with final angle and weapon damage (including player multiplier)
         Color projectileColor = getProjectileColor();
-        Projectile projectile = new Projectile(tip[0], tip[1], projectileColor, bulletSpeed, finalAngle, damage);
+        int totalDamage = (int) (damage * playerDamageMultiplier);
+        Projectile projectile = new Projectile(tip[0], tip[1], projectileColor, bulletSpeed, finalAngle, totalDamage);
         projectiles.add(projectile);
 
         return projectiles;

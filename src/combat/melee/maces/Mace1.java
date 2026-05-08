@@ -12,6 +12,7 @@ public class Mace1 extends Mace {
         damage = 250;
         attackSpeed = 0.9;
         name = "Mace1";
+        iconPath = "assets/items/melee/maces/mace1.png";
         // Re-apply tier multipliers after setting base stats
         applyTierMultipliers();
     }

@@ -11,15 +11,28 @@ import combat.ranged.shotguns.Shotgun1;
 import combat.ranged.smgs.SMG1;
 import combat.ranged.snipers.Sniper1;
 import combat.charms.Charm1;
+import combat.charms.SpeedCharm;
 import combat.summons.Summon1;
 import combat.powers.Fire;
 import combat.powers.Light;
 import combat.powers.Earth;
 import combat.powers.Lightning;
 import combat.powers.Water;
+import combat.powers.Magma;
+import combat.powers.EarthV2;
+import combat.powers.FireV2;
+import combat.powers.LightningV2;
+import combat.powers.MagmaV2;
+import combat.powers.WaterV2;
+import combat.powers.Infinity;
+import combat.powers.KingOfCurses;
+import combat.powers.RinneSharingan;
 import combat.consumables.Consumable1;
 import combat.consumables.Consumable2;
 import combat.consumables.Consumable3;
+import combat.consumables.DamagePotion;
+import combat.consumables.DamagePotion2;
+import combat.consumables.DamagePotion3;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -62,15 +75,32 @@ public class ItemRegistry {
 
         // Register other item types with their fixed tiers
         charms.add(new Charm1()); // Tier 1
+        charms.add(new SpeedCharm()); // Tier 1 - +5% speed
         summons.add(new Summon1()); // Tier 1
+
+        // Powers sorted by name, then by tier
+        powers.add(new Earth()); // Tier 1
         powers.add(new Fire()); // Tier 1
         powers.add(new Light()); // Tier 1
-        powers.add(new Earth()); // Tier 1
         powers.add(new Lightning()); // Tier 1
         powers.add(new Water()); // Tier 1
+        powers.add(new Magma()); // Tier 2
+        powers.add(new EarthV2()); // Tier 4
+        powers.add(new FireV2()); // Tier 4
+        powers.add(new LightningV2()); // Tier 4
+        powers.add(new MagmaV2()); // Tier 4
+        powers.add(new WaterV2()); // Tier 4
+        powers.add(new Infinity()); // Tier 5
+        powers.add(new KingOfCurses()); // Tier 5
+        powers.add(new RinneSharingan()); // Tier 5
+
+        // Consumables sorted by name, then by tier
         consumables.add(new Consumable1()); // Tier 2 (like Fortnite mini shields)
         consumables.add(new Consumable2()); // Tier 3 (like big shields)
         consumables.add(new Consumable3()); // Tier 4
+        consumables.add(new DamagePotion()); // Tier 1 - doubles damage for 10 seconds
+        consumables.add(new DamagePotion2()); // Tier 3 - doubles damage for 15 seconds
+        consumables.add(new DamagePotion3()); // Tier 4 - doubles damage for 20 seconds
 
         // Add all to combined list
         allItems.addAll(weapons);

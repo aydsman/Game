@@ -2,25 +2,57 @@ package entity;
 
 import java.awt.Color;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import combat.Projectile;
 import combat.Melee;
+import combat.Item;
+import combat.consumables.Consumable;
+import combat.ranged.pistols.Pistol1;
+import combat.ranged.rifles.Rifle1;
 import util.KeyHandler;
 import util.MouseHandler;
+import currency.CurrencyManager;
 
 public class Player extends Entity {
+
+    // Active consumable effect tracking
+    public static class ActiveConsumableEffect {
+        public Consumable.ConsumableEffectType type;
+        public double multiplier;
+        public long endTimeMs;
+        public String name;
+
+        public ActiveConsumableEffect(Consumable.ConsumableEffectType type, double multiplier, long durationMs, String name) {
+            this.type = type;
+            this.multiplier = multiplier;
+            this.endTimeMs = System.currentTimeMillis() + durationMs;
+            this.name = name;
+        }
+
+        public long getRemainingMs() {
+            return Math.max(0, endTimeMs - System.currentTimeMillis());
+        }
+
+        public boolean isExpired() {
+            return System.currentTimeMillis() >= endTimeMs;
+        }
+    }
 
     ArrayList<Object> hotbar = new ArrayList<>();
     double xpMultiplier = 1.0; // multiplier for xp
     private ArrayList<Projectile> projectiles = new ArrayList<>();
     private long lastShotTime = 0;
     private long gameStartTime;
-    private boolean canShoot = false;
     private PlayerStats stats = new PlayerStats();
     private combat.Inventory inventory = new combat.Inventory();
     private double baseHp; // Base HP before charm effects
     private double baseMaxHp; // Base max HP before charm effects
+    private double baseSpeed; // Base speed before charm effects
+    private Map<Consumable.ConsumableEffectType, ActiveConsumableEffect> activeEffects = new HashMap<>();
+    private CurrencyManager currencyManager = new CurrencyManager();
 
     public Player(int x, int y) {
         super(x, y);
@@ -40,6 +72,7 @@ public class Player extends Entity {
         // multipliers
         damage = 1.0;
         speed = 7.0;
+        baseSpeed = 7.0;
         // combat
         ranged = true;
         // visuals
@@ -66,45 +99,256 @@ public class Player extends Entity {
 
         // Set player reference in inventory for charm effects
         inventory.setPlayer(this);
+
     }
 
-    // Recalculate HP based on number of equipped combat.charms (additive stacking)
+    // Apply starting loadout from LoadoutScreen
+    public void applyLoadout(String weaponName, int weaponTier, String charmName, int charmTier, String powerName, int powerTier, String summonName, int summonTier, String consumableName, int consumableTier) {
+        // Apply starting weapon
+        if (!weaponName.equals("None") && !weaponName.isEmpty()) {
+            Item startingWeapon = createWeaponFromLoadout(weaponName, weaponTier);
+            if (startingWeapon != null) {
+                hotbar.set(0, startingWeapon);
+                equipHotbarSlot(0);
+                System.out.println("Spawned with weapon: " + weaponName + " (T" + weaponTier + ")");
+            }
+        }
+
+        // Apply starting charm (if unlocked and slot available)
+        if (!charmName.equals("None") && !charmName.isEmpty()) {
+            combat.charms.Charm startingCharm = createCharmFromLoadout(charmName);
+            if (startingCharm != null) {
+                startingCharm.setTier(charmTier);
+                inventory.equipCharm(0, startingCharm); // Equip in first charm slot
+                System.out.println("Spawned with charm: " + charmName + " (T" + charmTier + ")");
+            }
+        }
+
+        // Apply starting power
+        if (!powerName.equals("None") && !powerName.isEmpty()) {
+            combat.powers.Power startingPower = createPowerFromLoadout(powerName);
+            if (startingPower != null) {
+                startingPower.setTier(powerTier);
+                inventory.equipPower(startingPower);
+                System.out.println("Spawned with power: " + powerName + " (T" + powerTier + ")");
+            }
+        }
+
+        // Apply starting summon
+        if (!summonName.equals("None") && !summonName.isEmpty()) {
+            combat.summons.Summon startingSummon = createSummonFromLoadout(summonName);
+            if (startingSummon != null) {
+                startingSummon.setTier(summonTier);
+                inventory.equipSummon(startingSummon);
+                System.out.println("Spawned with summon: " + summonName + " (T" + summonTier + ")");
+            }
+        }
+
+        // Apply starting consumable (add to hotbar if slot available)
+        if (!consumableName.equals("None") && !consumableName.isEmpty()) {
+            combat.consumables.Consumable startingConsumable = createConsumableFromLoadout(consumableName);
+            if (startingConsumable != null) {
+                startingConsumable.setTier(consumableTier);
+                // Add to hotbar slot 4 (reserved for consumables)
+                if (hotbar.size() > 4) {
+                    hotbar.set(4, startingConsumable);
+                }
+                System.out.println("Spawned with consumable: " + consumableName + " (T" + consumableTier + ")");
+            }
+        }
+    }
+
+    private Item createWeaponFromLoadout(String weaponName, int tier) {
+        // First try the direct switch cases for known aliases
+        Item weapon = switch (weaponName) {
+            case "Glock", "Pistol1" -> new combat.ranged.pistols.Pistol1(tier);
+            case "AK-47", "Rifle1" -> new combat.ranged.rifles.Rifle1(tier);
+            case "Shotgun1" -> new combat.ranged.shotguns.Shotgun1(tier);
+            case "SMG1" -> new combat.ranged.smgs.SMG1(tier);
+            case "Sniper1" -> new combat.ranged.snipers.Sniper1(tier);
+            case "Sword1" -> new combat.melee.swords.Sword1(tier);
+            case "Hammer1" -> new combat.melee.hammers.Hammer1(tier);
+            case "Dagger1" -> new combat.melee.daggers.Dagger1(tier);
+            case "Mace1" -> new combat.melee.maces.Mace1(tier);
+            case "Scythe1" -> new combat.melee.scythes.Scythe1(tier);
+            default -> null;
+        };
+        
+        // If not found in switch, try creating dynamically using reflection
+        if (weapon == null) {
+            try {
+                Class<?> itemClass = findWeaponClass(weaponName);
+                if (itemClass != null) {
+                    // Try constructor with tier parameter
+                    try {
+                        return (Item) itemClass.getConstructor(int.class).newInstance(tier);
+                    } catch (NoSuchMethodException e) {
+                        // Try no-arg constructor
+                        return (Item) itemClass.getConstructor().newInstance();
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("Failed to create weapon: " + weaponName + " (tier " + tier + ")");
+            }
+        }
+        return weapon;
+    }
+    
+    private Class<?> findWeaponClass(String weaponName) {
+        String[] packages = {
+            "combat.ranged.pistols.",
+            "combat.ranged.rifles.",
+            "combat.ranged.shotguns.",
+            "combat.ranged.smgs.",
+            "combat.ranged.snipers.",
+            "combat.melee.swords.",
+            "combat.melee.hammers.",
+            "combat.melee.daggers.",
+            "combat.melee.maces.",
+            "combat.melee.scythes."
+        };
+        
+        for (String pkg : packages) {
+            try {
+                return Class.forName(pkg + weaponName);
+            } catch (ClassNotFoundException e) {
+                // Continue searching
+            }
+        }
+        return null;
+    }
+
+    private combat.charms.Charm createCharmFromLoadout(String charmName) {
+        return switch (charmName) {
+            case "Charm1", "SimpleCharm" -> new combat.charms.Charm1();
+            case "SpeedCharm" -> new combat.charms.SpeedCharm();
+            default -> {
+                // Try dynamic creation
+                try {
+                    Class<?> charmClass = Class.forName("combat.charms." + charmName);
+                    yield (combat.charms.Charm) charmClass.getConstructor().newInstance();
+                } catch (Exception e) {
+                    System.err.println("Failed to create charm: " + charmName);
+                    yield null;
+                }
+            }
+        };
+    }
+
+    private combat.powers.Power createPowerFromLoadout(String powerName) {
+        return switch (powerName) {
+            case "Fire" -> new combat.powers.Fire();
+            case "Earth" -> new combat.powers.Earth();
+            case "Light" -> new combat.powers.Light();
+            case "Lightning" -> new combat.powers.Lightning();
+            case "Water" -> new combat.powers.Water();
+            case "Magma" -> new combat.powers.Magma();
+            case "FireV2" -> new combat.powers.FireV2();
+            case "EarthV2" -> new combat.powers.EarthV2();
+            case "LightningV2" -> new combat.powers.LightningV2();
+            case "MagmaV2" -> new combat.powers.MagmaV2();
+            case "WaterV2" -> new combat.powers.WaterV2();
+            case "Infinity" -> new combat.powers.Infinity();
+            case "KingOfCurses" -> new combat.powers.KingOfCurses();
+            case "RinneSharingan" -> new combat.powers.RinneSharingan();
+            default -> {
+                // Try dynamic creation
+                try {
+                    Class<?> powerClass = Class.forName("combat.powers." + powerName);
+                    yield (combat.powers.Power) powerClass.getConstructor().newInstance();
+                } catch (Exception e) {
+                    System.err.println("Failed to create power: " + powerName);
+                    yield null;
+                }
+            }
+        };
+    }
+
+    private combat.summons.Summon createSummonFromLoadout(String summonName) {
+        return switch (summonName) {
+            case "Summon1" -> new combat.summons.Summon1();
+            case "Summon2" -> new combat.summons.Summon2();
+            case "Summon3" -> new combat.summons.Summon3();
+            case "Summon4" -> new combat.summons.Summon4();
+            case "Summon5" -> new combat.summons.Summon5();
+            default -> {
+                // Try dynamic creation
+                try {
+                    Class<?> summonClass = Class.forName("combat.summons." + summonName);
+                    yield (combat.summons.Summon) summonClass.getConstructor().newInstance();
+                } catch (Exception e) {
+                    System.err.println("Failed to create summon: " + summonName);
+                    yield null;
+                }
+            }
+        };
+    }
+
+    private combat.consumables.Consumable createConsumableFromLoadout(String consumableName) {
+        return switch (consumableName) {
+            case "Consumable1" -> new combat.consumables.Consumable1();
+            case "Consumable2" -> new combat.consumables.Consumable2();
+            case "Consumable3" -> new combat.consumables.Consumable3();
+            case "DamagePotion" -> new combat.consumables.DamagePotion();
+            case "DamagePotion2" -> new combat.consumables.DamagePotion2();
+            case "DamagePotion3" -> new combat.consumables.DamagePotion3();
+            default -> {
+                // Try dynamic creation
+                try {
+                    Class<?> consumableClass = Class.forName("combat.consumables." + consumableName);
+                    yield (combat.consumables.Consumable) consumableClass.getConstructor().newInstance();
+                } catch (Exception e) {
+                    System.err.println("Failed to create consumable: " + consumableName);
+                    yield null;
+                }
+            }
+        };
+    }
+
+    // Recalculate HP and Speed based on equipped charms (additive stacking)
     public void recalculateCharmEffects() {
         int charmCount = 0;
+        int speedCharmCount = 0;
         for (int i = 0; i < inventory.getMaxCharms(); i++) {
-            if (inventory.getCharm(i) != null) {
+            combat.charms.Charm charm = inventory.getCharm(i);
+            if (charm != null) {
                 charmCount++;
+                if (charm instanceof combat.charms.SpeedCharm) {
+                    speedCharmCount++;
+                }
             }
         }
         // Each charm adds 10% of base HP
-        double totalBoost = charmCount * 0.1;
-        setHp((int)(baseHp + (baseHp * totalBoost)));
-        setMaxHp((int)(baseMaxHp + (baseMaxHp * totalBoost)));
+        double totalHpBoost = charmCount * 0.1;
+        setHp((int)(baseHp + (baseHp * totalHpBoost)));
+        setMaxHp((int)(baseMaxHp + (baseMaxHp * totalHpBoost)));
+
+        // Each SpeedCharm adds 10% of base speed
+        double totalSpeedBoost = speedCharmCount * 0.10;
+        speed = baseSpeed + (baseSpeed * totalSpeedBoost);
     }
 
     public void resetMouseClicks(MouseHandler mouse) {
         mouse.leftClicked = false;
         mouse.rightClicked = false;
+        mouse.leftPressed = false;
+        mouse.rightPressed = false;
     }
 
     public void update(KeyHandler key, MouseHandler mouse, int arenaWidth, int arenaHeight) {
-        if (key.upPressed)    y -= (int) speed;
-        if (key.downPressed)  y += (int) speed;
-        if (key.leftPressed)  x -= (int) speed;
-        if (key.rightPressed) x += (int) speed;
+        if (key != null) {
+            if (key.upPressed)    y -= (int) speed;
+            if (key.downPressed)  y += (int) speed;
+            if (key.leftPressed)  x -= (int) speed;
+            if (key.rightPressed) x += (int) speed;
+        }
 
         // clamp player to arena bounds
         x = Math.max(0, Math.min(x, arenaWidth - w));
         y = Math.max(0, Math.min(y, arenaHeight - l));
 
-        // Clear stale mouse clicks on first update
-        if (!canShoot) {
-            mouse.leftClicked = false;
-            canShoot = true;
-        }
-
         // Handle reload
-        if (key.rPressed && heldWeapon instanceof combat.Ranged) {
+        if (key != null && key.rPressed && heldWeapon instanceof combat.Ranged) {
             ((combat.Ranged) heldWeapon).reload();
         }
 
@@ -115,7 +359,7 @@ public class Player extends Entity {
 
         // Handle ranged or melee attacks
         long currentTime = System.currentTimeMillis();
-        if (heldWeapon != null && canShoot) {
+        if (heldWeapon != null) {
             if (heldWeapon instanceof Melee) {
                 // Melee swing attack
                 handleMeleeAttack(mouse, (Melee) heldWeapon);
@@ -215,7 +459,8 @@ public class Player extends Entity {
     public void shoot() {
         if (heldWeapon instanceof combat.Ranged) {
             combat.Ranged ranged = (combat.Ranged) heldWeapon;
-            List<Projectile> bullets = ranged.shoot(getCenterX(), getCenterY(), barrelAngle);
+            double damageMultiplier = getTotalDamageMultiplier();
+            List<Projectile> bullets = ranged.shoot(getCenterX(), getCenterY(), barrelAngle, damageMultiplier);
             if (bullets != null) {
                 projectiles.addAll(bullets);
                 stats.addShotFired();
@@ -268,9 +513,13 @@ public class Player extends Entity {
             }
         }
         projectiles.removeAll(toRemove);
-        // Gain XP from killed enemies
+        // Gain XP and Gold from killed enemies
         for (entity.Enemy enemy : killedEnemies) {
-            gainXP(enemy.xpValue);
+            int xp = enemy.getXpValue();
+            gainXP(xp);
+            currencyManager.addGold(enemy.getGoldValue());
+            // Save XP to persistent storage
+            save.SaveManager.addXP(xp);
         }
     }
 
@@ -303,5 +552,86 @@ public class Player extends Entity {
                 ranged = false;
             }
         }
+    }
+
+    // Active consumable effects management
+    public void addConsumableEffect(Consumable consumable) {
+        if (consumable.getEffectType() == Consumable.ConsumableEffectType.NONE || consumable.getDurationMs() <= 0) {
+            return;
+        }
+        ActiveConsumableEffect effect = new ActiveConsumableEffect(
+            consumable.getEffectType(),
+            consumable.getEffectMultiplier(),
+            consumable.getDurationMs(),
+            consumable.getName()
+        );
+        activeEffects.put(consumable.getEffectType(), effect);
+    }
+
+    public Map<Consumable.ConsumableEffectType, ActiveConsumableEffect> getActiveEffects() {
+        return activeEffects;
+    }
+
+    public void expireConsumableEffects() {
+        activeEffects.entrySet().removeIf(entry -> entry.getValue().isExpired());
+    }
+
+    public double getTotalDamageMultiplier() {
+        expireConsumableEffects();
+        double totalMultiplier = damage; // base player damage multiplier
+        for (ActiveConsumableEffect effect : activeEffects.values()) {
+            if (effect.type == Consumable.ConsumableEffectType.DAMAGE_BOOST) {
+                totalMultiplier *= effect.multiplier;
+            }
+        }
+        return totalMultiplier;
+    }
+
+    public int getEffectiveMeleeDamage() {
+        if (heldWeapon instanceof combat.Melee) {
+            combat.Melee melee = (combat.Melee) heldWeapon;
+            double multiplier = getTotalDamageMultiplier();
+            return (int) (melee.getDamage() * multiplier);
+        }
+        return 0;
+    }
+
+    /**
+     * Handles shooting mechanics with conditional disabling and optional pre-update logic.
+     * @param mouse The mouse handler
+     * @param key The key handler for movement
+     * @param shouldDisableShooting Whether shooting should be disabled
+     * @param preUpdateLogic Optional logic to run before update() (can be null)
+     * @param arenaWidth Arena width
+     * @param arenaHeight Arena height
+     * @return The original leftPressed state (for restoration)
+     */
+    public boolean handleShootingMechanics(MouseHandler mouse, KeyHandler key, boolean shouldDisableShooting, Runnable preUpdateLogic, int arenaWidth, int arenaHeight) {
+        // Save original mouse state
+        boolean wasLeftPressed = mouse.leftPressed;
+        boolean wasLeftClicked = mouse.leftClicked;
+
+        // Disable shooting if conditions met
+        if (shouldDisableShooting) {
+            mouse.leftClicked = false;
+            mouse.leftPressed = false;
+        }
+
+        // Execute any pre-update logic (like consumable handling)
+        if (preUpdateLogic != null) {
+            preUpdateLogic.run();
+        }
+
+        // Update player (handles movement, shooting, projectiles, etc.)
+        update(key, mouse, arenaWidth, arenaHeight);
+
+        // Restore leftPressed so drag doesn't break (don't restore leftClicked - it's one-shot)
+        mouse.leftPressed = wasLeftPressed;
+
+        return wasLeftPressed;
+    }
+
+    public CurrencyManager getCurrencyManager() {
+        return currencyManager;
     }
 }

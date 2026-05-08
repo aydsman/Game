@@ -1,8 +1,8 @@
 # Abyss Class Documentation
 
-**Total Classes:** 96
+**Total Classes:** 112
 
-**Total Lines of Code:** 7,832
+**Total Lines of Code:** 9,000+
 
 ## Table of Contents
 
@@ -17,15 +17,35 @@
   - [combat.charms/](#charms)
     - [Charm.java](#charmjava-extends-item)
     - [Charm1.java](#charm1java-extends-charm)
+    - [SpeedCharm.java](#speedcharmjava-extends-charm)
   - [summons/](#summons)
     - [Summon.java](#summonjava-extends-item)
     - [Summon1.java](#summon1java-extends-summon)
+    - [Summon2.java](#summon2java-extends-summon)
   - [combat.powers/](#powers)
     - [Power.java](#powerjava-extends-item)
-    - [Power1.java](#power1java-extends-power)
+    - [Earth.java](#earthjava-extends-power)
+    - [EarthV2.java](#earthv2java-extends-power)
+    - [Fire.java](#firejava-extends-power)
+    - [FireV2.java](#firev2java-extends-power)
+    - [Infinity.java](#infinityjava-extends-power)
+    - [KingOfCurses.java](#kingofcursesjava-extends-power)
+    - [Light.java](#lightjava-extends-power)
+    - [Lightning.java](#lightningjava-extends-power)
+    - [LightningV2.java](#lightningv2java-extends-power)
+    - [Magma.java](#magmajava-extends-power)
+    - [MagmaV2.java](#magmav2java-extends-power)
+    - [Move.java](#movejava-extends-power)
+    - [RinneSharingan.java](#rinne sharinganjava-extends-power)
+    - [Water.java](#waterjava-extends-power)
   - [combat.consumables/](#consumables)
     - [Consumable.java](#consumablejava-extends-item)
     - [Consumable1.java](#consumable1java-extends-consumable)
+    - [Consumable2.java](#consumable2java-extends-consumable)
+    - [Consumable3.java](#consumable3java-extends-consumable)
+    - [DamagePotion.java](#damagepotionjava-extends-consumable)
+    - [DamagePotion2.java](#damagepotion2java-extends-consumable)
+    - [DamagePotion3.java](#damagepotion3java-extends-consumable)
 - [combat/melee/](#combatmelee)
   - [daggers/](#daggers)
     - [Dagger.java](#daggerjava-extends-melee)
@@ -74,6 +94,13 @@
   - [Boss1.java](#boss1java-extends-boss)
 - [inventory/](#inventory)
   - [Inventory.java](#inventoryjava)
+  - [Charm.java](#inventorycharmjava) (combat/inventory/)
+  - [Charm2.java](#charm2java)
+  - [Charm3.java](#charm3java)
+  - [Power.java](#inventorypowerjava)
+  - [Power2.java](#power2java)
+  - [Summon.java](#inventorysummonjava)
+  - [Summon2.java](#summon2java)
 - [progression/](#progression)
   - [XP.java](#xpjava)
 - [ui/](#ui)
@@ -90,6 +117,8 @@
   - [HelpScreen.java](#helpscreenjava)
   - [ItemGalleryScreen.java](#itemgalleryscreenjava)
   - [GraphTestScreen.java](#graphtestscreenjava)
+  - [LoadoutScreen.java](#loadoutscreenjava)
+  - [ShopScreen.java](#shopscreenjava)
 - [util/](#util)
   - [Camera.java](#camerajava)
   - [KeyHandler.java](#keyhandlerjava-implements-keylistener)
@@ -98,6 +127,8 @@
   - [Arena.java](#arenajava-base-class)
 - [world/arenas/](#worldarenas)
   - [ArenaTest.java](#arenatestjava-extends-arena)
+- [world/dungeon/](#worlddungeon)
+  - [DungeonArenaScreen.java](#dungeonarenascreenjava)
 
 ---
 
@@ -251,6 +282,11 @@
 - `Charm1()` - Tier I charm
 - `Charm1(int tier)` - Constructor with tier
 
+### SpeedCharm.java (extends Charm)
+- `SpeedCharm()` - Speed boost charm (+10% movement speed)
+- `SpeedCharm(int tier)` - Constructor with tier
+- `getSpeedBonus()` - Returns speed percentage bonus
+
 ---
 
 ## combat/summons/
@@ -263,6 +299,10 @@
 - `Summon1()` - Tier I summon
 - `Summon1(int tier)` - Constructor with tier
 
+### Summon2.java (extends Summon)
+- `Summon2()` - Tier II summon
+- `Summon2(int tier)` - Constructor with tier
+
 ---
 
 ## combat/combat.powers/
@@ -271,9 +311,61 @@
 - `Power()` - Default constructor
 - `Power(int tier)` - Constructor with tier
 
-### Power1.java (extends Power)
-- `Power1()` - Tier I power
-- `Power1(int tier)` - Constructor with tier
+### Earth.java (extends Power)
+- `Earth()` - Earth elemental power
+- `Earth(int tier)` - Constructor with tier
+
+### EarthV2.java (extends Power)
+- `EarthV2()` - Enhanced earth power
+- `EarthV2(int tier)` - Constructor with tier
+
+### Fire.java (extends Power)
+- `Fire()` - Fire elemental power
+- `Fire(int tier)` - Constructor with tier
+
+### FireV2.java (extends Power)
+- `FireV2()` - Enhanced fire power
+- `FireV2(int tier)` - Constructor with tier
+
+### Infinity.java (extends Power)
+- `Infinity()` - Infinity power (unlimited ammo mode)
+- `Infinity(int tier)` - Constructor with tier
+
+### KingOfCurses.java (extends Power)
+- `KingOfCurses()` - King of Curses power (powerful curse abilities)
+- `KingOfCurses(int tier)` - Constructor with tier
+
+### Light.java (extends Power)
+- `Light()` - Light elemental power
+- `Light(int tier)` - Constructor with tier
+
+### Lightning.java (extends Power)
+- `Lightning()` - Lightning elemental power
+- `Lightning(int tier)` - Constructor with tier
+
+### LightningV2.java (extends Power)
+- `LightningV2()` - Enhanced lightning power
+- `LightningV2(int tier)` - Constructor with tier
+
+### Magma.java (extends Power)
+- `Magma()` - Magma elemental power (fire + earth)
+- `Magma(int tier)` - Constructor with tier
+
+### MagmaV2.java (extends Power)
+- `MagmaV2()` - Enhanced magma power
+- `MagmaV2(int tier)` - Constructor with tier
+
+### Move.java (extends Power)
+- `Move()` - Movement enhancement power
+- `Move(int tier)` - Constructor with tier
+
+### RinneSharingan.java (extends Power)
+- `RinneSharingan()` - Rinne Sharingan power (special abilities)
+- `RinneSharingan(int tier)` - Constructor with tier
+
+### Water.java (extends Power)
+- `Water()` - Water elemental power
+- `Water(int tier)` - Constructor with tier
 
 ---
 
@@ -284,8 +376,37 @@
 - `Consumable(int tier)` - Constructor with tier
 
 ### Consumable1.java (extends Consumable)
-- `Consumable1()` - Tier I consumable
+- `Consumable1()` - Tier I consumable (Small health potion)
 - `Consumable1(int tier)` - Constructor with tier
+
+### Consumable2.java (extends Consumable)
+- `Consumable2()` - Tier II consumable (Medium health potion)
+- `Consumable2(int tier)` - Constructor with tier
+
+### Consumable3.java (extends Consumable)
+- `Consumable3()` - Tier III consumable (Large health potion)
+- `Consumable3(int tier)` - Constructor with tier
+
+### DamagePotion.java (extends Consumable)
+- `DamagePotion()` - Tier I damage buff potion (10s duration, 1.2x multiplier)
+- `DamagePotion(int tier)` - Constructor with tier
+- `getEffect()` - Returns "damage_boost"
+- `getEffectDuration()` - Returns 10 seconds
+- `getEffectMultiplier()` - Returns 1.2 multiplier
+
+### DamagePotion2.java (extends Consumable)
+- `DamagePotion2()` - Tier II damage buff potion (15s duration, 1.4x multiplier)
+- `DamagePotion2(int tier)` - Constructor with tier
+- `getEffect()` - Returns "damage_boost"
+- `getEffectDuration()` - Returns 15 seconds
+- `getEffectMultiplier()` - Returns 1.4 multiplier
+
+### DamagePotion3.java (extends Consumable)
+- `DamagePotion3()` - Tier III damage buff potion (20s duration, 1.6x multiplier)
+- `DamagePotion3(int tier)` - Constructor with tier
+- `getEffect()` - Returns "damage_boost"
+- `getEffectDuration()` - Returns 20 seconds
+- `getEffectMultiplier()` - Returns 1.6 multiplier
 
 ---
 
@@ -429,10 +550,12 @@
 - `canShoot` (boolean) - Can shoot flag
 - `stats` (PlayerStats) - Player statistics tracking
 - `cameraX, cameraY` (int) - Camera offset for mouse calculations
+- `inventory` (Inventory) - Player inventory system
+- `activeConsumableEffects` (List<ActiveEffect>) - Active consumable buffs/debuffs
 
 **Methods:**
 - `Player(int x, int y)` - Constructor
-- `playerSpawn()` - Initializes player with 5-slot hotbar (Pistol1 in slot 0, Sword1 in slot 1)
+- `playerSpawn()` - Initializes player with 5-slot hotbar
 - `resetMouseClicks(MouseHandler mouse)` - Resets mouse clicks
 - `update(KeyHandler key, MouseHandler mouse, int arenaWidth, int arenaHeight)` - Updates player movement, attacks, reloads
 - `handleMeleeAttack(MouseHandler mouse, Melee melee)` - Handles melee swing attacks
@@ -446,6 +569,14 @@
 - `getHotbar()` - Returns hotbar list (5 fixed slots)
 - `equipHotbarSlot(int slot)` - Equips item from hotbar slot (supports Ranged and Melee)
 - `getStats()` - Returns PlayerStats instance
+- `applyLoadout(String weaponName, int weaponTier, String charmName, String powerName, String summonName, String consumableName)` - Applies starting loadout configuration
+- `createWeaponFromLoadout(String weaponName, int tier)` - Creates weapon instance for loadout
+- `createCharmFromLoadout(String charmName)` - Creates charm instance for loadout
+- `useConsumable(int slot)` - Uses consumable from inventory slot
+- `addConsumableEffect(Consumable consumable)` - Adds active consumable effect
+- `updateConsumableEffects()` - Updates and expires consumable effects
+- `getEffectiveDamageMultiplier()` - Returns damage multiplier with consumable buffs
+- `getInventory()` - Returns inventory instance
 
 ### PlayerStats.java
 **Fields:**
@@ -559,6 +690,48 @@
 - `getSelectedSlot()` - Returns selected slot
 - `getHotbarSize()` - Returns hotbar size (5)
 - `scrollHotbar(int direction)` - Scrolls hotbar with loop-around
+- `equipCharm(int index, Charm charm)` - Equips charm at index
+- `getCharm(int index)` - Returns charm at index
+- `removeCharm(int index)` - Removes charm at index
+- `setPlayer(Player player)` - Sets player reference
+- `applyCharmEffects()` - Recalculates and applies all charm effects
+
+### combat/inventory/Charm.java
+- `Charm()` - Constructor for inventory charm
+- `Charm(int tier)` - Constructor with tier
+- `applyEffect(Player player)` - Applies charm effect to player
+
+### Charm2.java
+- `Charm2()` - Tier II inventory charm
+- `Charm2(int tier)` - Constructor with tier
+
+### Charm3.java
+- `Charm3()` - Tier III inventory charm
+- `Charm3(int tier)` - Constructor with tier
+
+### Power.java (combat/inventory/)
+- `Power()` - Constructor for inventory power
+- `Power(int tier)` - Constructor with tier
+- `activate()` - Activates power effect
+
+### Power2.java
+- `Power2()` - Tier II inventory power
+- `Power2(int tier)` - Constructor with tier
+
+### Summon.java (combat/inventory/)
+- `Summon()` - Constructor for inventory summon
+- `Summon(int tier)` - Constructor with tier
+- `summon()` - Summons entity
+
+### Summon2.java
+- `Summon2()` - Tier II inventory summon
+- `Summon2(int tier)` - Constructor with tier
+
+### LootBox.java (combat/lootboxes/)
+- `LootBox()` - Constructor
+- `open()` - Opens loot box and returns random items
+- `getTier()` - Returns loot box tier
+- `setTier(int tier)` - Sets loot box tier
 
 ---
 
@@ -594,8 +767,8 @@
 
 ### GamePanel.java (extends JPanel, implements Runnable)
 **Fields:**
-- `SCREEN_WIDTH` (int) - 800
-- `SCREEN_HEIGHT` (int) - 600
+- `SCREEN_WIDTH` (int) - 1600
+- `SCREEN_HEIGHT` (int) - 900
 - `FPS` (int) - 60
 - `keyHandler` (KeyHandler)
 - `mouseHandler` (MouseHandler)
@@ -605,14 +778,19 @@
 - `customizeScreen` (CustomizeScreen)
 - `settingsScreen` (SettingsScreen)
 - `helpScreen` (HelpScreen)
-- `showMenu, showGame, showPause, showCustomize, showSettings, showHelp` (boolean) - Screen states
+- `graphTestScreen` (GraphTestScreen)
+- `itemGalleryScreen` (ItemGalleryScreen)
+- `dungeonArenaScreen` (DungeonArenaScreen)
+- `loadoutScreen` (LoadoutScreen)
+- `shopScreen` (ShopScreen)
+- `showMenu, showGame, showPause, showCustomize, showSettings, showHelp, showGraphTest, showItems, showDungeonArena, showLoadout, showShop` (boolean) - Screen states
 - `gameThread` (Thread)
 
 **Methods:**
 - `GamePanel()` - Constructor, initializes screens and input handlers
-- `switchScreen(String screen)` - Switches to specified screen
+- `switchScreen(String screen)` - Switches to specified screen (applies loadout when starting game)
 - `run()` - Game loop
-- `update()` - Updates game screen
+- `update()` - Updates game screen (handles U key for Loadout debug, level keys for GraphTest)
 - `paintComponent(Graphics g)` - Draws current screen
 
 ### HUD.java
@@ -746,6 +924,48 @@
 - `GraphTestScreen(GamePanel gamePanel)` - Constructor
 - `handleClick(int x, int y)` - Handles clicks
 - `draw(Graphics2D g)` - Draws graph test screen
+- `regenerateLevel()` - Regenerates dungeon level
+- `setLevel(int level)` - Sets dungeon level (1-5)
+
+### LoadoutScreen.java
+**Fields:**
+- `gamePanel` (GamePanel)
+- `backBtn` (Rectangle) - Back button
+- `weaponSlot, charmSlot1-3, powerSlot, summonSlot, consumableSlot` (Rectangle) - Loadout slots
+- `unlockedWeapons` (Map<String, List<Integer>>) - Weapon name -> unlocked tiers
+- `selectedWeapon` (String) - Currently selected weapon
+- `selectedWeaponTier` (int) - Selected weapon tier (1-5)
+- `selectedCharm, selectedPower, selectedSummon, selectedConsumable` (String) - Other selections
+- `unlockedCharmSlots, unlockedConsumableSlots` (int) - Unlocked slot counts (meta-progression)
+- `showUnlockedItemsDebug` (boolean) - Debug panel toggle (U key)
+- `openPicker` (String) - Currently open picker type
+
+**Methods:**
+- `LoadoutScreen(GamePanel gamePanel)` - Constructor
+- `toggleDebugPanel()` - Toggles debug panel visibility
+- `handleClick(int x, int y)` - Handles slot clicks and picker selection
+- `handleWeaponPickerClick(int x, int y)` - Handles weapon grid picker clicks
+- `draw(Graphics2D g, int width, int height)` - Renders loadout screen
+- `drawWeaponPickerGrid(Graphics2D g, int pickerX, int pickerY)` - Draws gallery-style weapon picker organized by tier
+- `drawUnlockedItemsPanel(Graphics2D g, int x, int y)` - Draws debug unlocked items panel
+- `getSelectedWeapon()` - Returns selected weapon name
+- `getSelectedWeaponTier()` - Returns selected weapon tier
+- `getSelectedCharm()` - Returns selected charm
+- `getSelectedPower()` - Returns selected power
+- `getSelectedSummon()` - Returns selected summon
+- `getSelectedConsumable()` - Returns selected consumable
+- `createWeapon(String weaponName, int tier)` - Creates weapon instance
+- `loadIcon(String path)` - Caches and returns weapon icons
+
+### ShopScreen.java
+**Fields:**
+- `gamePanel` (GamePanel)
+- `backBtn` (Rectangle) - Back button
+
+**Methods:**
+- `ShopScreen(GamePanel gamePanel)` - Constructor
+- `handleClick(int x, int y)` - Handles button clicks
+- `draw(Graphics2D g, int screenWidth, int screenHeight)` - Renders shop screen
 
 ---
 
@@ -809,3 +1029,24 @@
 ### ArenaTest.java (extends Arena)
 **Methods:**
 - `ArenaTest()` - Constructor with 2000x2000 arena
+
+---
+
+## world/dungeon/
+
+### DungeonArenaScreen.java
+**Fields:**
+- `arena` (Arena) - Current dungeon arena
+- `player` (Player) - Player entity
+- `camera` (Camera) - Camera following player
+- `hud` (HUD) - Heads-up display
+- `dungeon` (Graph) - Procedurally generated dungeon graph
+- `currentLevel` (int) - Current dungeon level (1-5)
+
+**Methods:**
+- `DungeonArenaScreen()` - Constructor, initializes dungeon
+- `resetMouseClicks(MouseHandler mouse)` - Resets mouse clicks
+- `regenerateLevel()` - Regenerates dungeon layout
+- `setLevel(int level)` - Sets dungeon level difficulty
+- `update(KeyHandler key, MouseHandler mouse, int screenWidth, int screenHeight)` - Updates game state
+- `draw(Graphics2D g, int screenWidth, int screenHeight)` - Renders dungeon with fog of war

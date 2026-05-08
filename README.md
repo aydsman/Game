@@ -4,8 +4,8 @@ A Java-based 2D action game featuring dungeon crawling, arena combat, wave survi
 
 ## Project Stats
 
-- **Total Classes:** 96
-- **Total Lines of Code:** 7,832
+- **Total Classes:** 105+
+- **Total Lines of Code:** 8,500+
 - **Language:** Java 17+
 
 ## Table of Contents
@@ -124,16 +124,17 @@ All melee weapons feature:
 
 ## Screens
 
-1. **MenuScreen** - Main menu with Play, Customize, Settings, Help buttons
+1. **MenuScreen** - Main menu with Arena, Dungeon, Loadout, Customize, Settings, Help buttons
 2. **GameScreen** - Main gameplay with arena combat and wave management
 3. **DungeonArenaScreen** - Procedurally generated dungeon crawling
-4. **ItemGalleryScreen** - Browse all items with tier cycling and detailed stats
-5. **GraphTestScreen** - Visualize dungeon generation algorithm
-6. **InventoryScreen** - Full inventory management
-7. **PauseScreen** - Pause overlay
-8. **SettingsScreen** - Game settings
-9. **HelpScreen** - Controls and help
-10. **CustomizeScreen** - Character customization
+4. **LoadoutScreen** - Configure starting equipment (weapon, charm, power, summon, consumable)
+5. **ItemGalleryScreen** - Browse all items with tier cycling and detailed stats
+6. **GraphTestScreen** - Visualize dungeon generation algorithm
+7. **InventoryScreen** - Full inventory management
+8. **PauseScreen** - Pause overlay
+9. **SettingsScreen** - Game settings
+10. **HelpScreen** - Controls and help
+11. **CustomizeScreen** - Character customization
 
 ## Project Structure
 
@@ -175,9 +176,12 @@ src/
 │   │   └── Summon1.java
 │   └── consumables/             # Consumable items
 │       ├── Consumable.java
-│       ├── Consumable1.java
-│       ├── Consumable2.java
-│       └── Consumable3.java
+│       ├── Consumable1.java      # Small health potion
+│       ├── Consumable2.java      # Medium health potion
+│       ├── Consumable3.java      # Large health potion
+│       ├── DamagePotion.java     # Small damage buff (10s)
+│       ├── DamagePotion2.java    # Medium damage buff (15s)
+│       └── DamagePotion3.java    # Large damage buff (20s)
 ├── entity/                      # Game entities
 │   ├── Entity.java              # Base entity (position, HP, damage, speed)
 │   ├── Player.java                # Player with hotbar, projectiles, stats
@@ -202,6 +206,7 @@ src/
 │       ├── MenuScreen.java
 │       ├── GameScreen.java      # Main gameplay (982 lines)
 │       ├── DungeonArenaScreen.java
+│       ├── LoadoutScreen.java   # Starting loadout configuration
 │       ├── ItemGalleryScreen.java
 │       ├── GraphTestScreen.java
 │       ├── PauseScreen.java
@@ -260,6 +265,31 @@ Chests use probability-based loot tables:
 - **Melee**: Arc-based collision within swing range and angle
 - **Dungeon**: Room/hallway boundary collision with opening detection
 - **Camera**: Smooth lerp (0.1 speed) following player
+
+## Meta-Progression System
+
+### Collection & Loadout
+- **Persistent Collection**: Items unlocked permanently persist between runs
+- **Starting Loadout**: Configure what you begin each run with
+  - **Weapon Slot**: Choose 1 starting weapon from collection (with tier selection)
+  - **Charm Slots**: Start with 1 slot (expandable to 3 via skill tree)
+  - **Power Slot**: Choose 1 starting power
+  - **Summon Slot**: Choose 1 starting summon
+  - **Consumable Slots**: Optional starting consumables (unlockable)
+- **Loadout UI**: Grid-based weapon picker with tier selection (T1-T5 color-coded)
+- **Debug Panel**: Press U in Loadout screen to view unlocked items
+
+### Item Sources
+- Loot boxes (Common, Rare, Epic, Legendary)
+- Mission/quest rewards
+- Dungeon/arena completion
+- Shop purchase with earned currency
+
+### Meta-Upgrades (Skill Tree)
+- +1 Starting Charm Slot (max 3)
+- +1 Starting Consumable Slot
+- Better loot box drop rates
+- Starting currency bonuses
 
 ## Running the Game
 

@@ -5,6 +5,7 @@ import entity.EnemyManager;
 import entity.Player;
 import combat.powers.Power;
 import combat.powers.Move;
+import ui.GamePanel;
 import ui.HUD;
 import ui.ChestUI;
 import ui.InventoryScreen;
@@ -16,6 +17,7 @@ import world.arena.WaveManager;
 import world.chests.ArenaChest;
 import world.chests.Chest;
 import java.awt.Color;
+import java.awt.Font;
 import java.awt.Graphics2D;
 import java.util.ArrayList;
 
@@ -47,8 +49,25 @@ public class GameScreen {
     private boolean debugMode = false;
     private boolean wavesEnabled = true; // Enable waves
     private boolean statsPanelVisible = false; // Toggle with U key for debugging
+    private boolean paused = false;
+    private boolean pPressedLastFrame = false;
+    private static final int PAUSE_MENU_MARGIN = 150;
+    private GamePanel gamePanel;
+    
+    // Auto-save tracking
+    private long lastAutoSaveTime = 0;
+    private static final long AUTO_SAVE_INTERVAL = 10000; // Auto-save every 10 seconds
+    private int lastSavedKills = 0;
 
     public GameScreen() {
+        waveManager = new WaveManager(enemyManager, player, arena.getWidth(), arena.getHeight());
+        waveManager.setEnabled(wavesEnabled);
+
+        // Chests spawn via waves
+    }
+
+    public GameScreen(GamePanel gamePanel) {
+        this.gamePanel = gamePanel;
         waveManager = new WaveManager(enemyManager, player, arena.getWidth(), arena.getHeight());
         waveManager.setEnabled(wavesEnabled);
 
@@ -59,10 +78,63 @@ public class GameScreen {
         player.resetMouseClicks(mouse);
     }
 
+    public void resetGame() {
+        // Reset player
+        player.setX(arena.getWidth() / 2);
+        player.setY(arena.getHeight() / 2);
+        player.playerSpawn();
+        player.getProjectiles().clear();
+
+        // Reset wave manager
+        waveManager = new WaveManager(enemyManager, player, arena.getWidth(), arena.getHeight());
+        waveManager.setEnabled(wavesEnabled);
+
+        // Reset enemy manager
+        enemyManager.clear();
+
+        // Reset chests
+        chests.clear();
+        activeChest = null;
+
+        // Reset inventory state
+        inventoryOpen = false;
+        draggedItem = null;
+        dragSource = -1;
+        dragSourceSlot = -1;
+
+        // Reset pause state
+        paused = false;
+
+        // Reset camera
+        camera.x = 0;
+        camera.y = 0;
+
+        // Reset key press states
+        wasLeftPressedLastFrame = false;
+        ePressedLastFrame = false;
+        tabPressedLastFrame = false;
+        onePressedLastFrame = false;
+        twoPressedLastFrame = false;
+        threePressedLastFrame = false;
+        fourPressedLastFrame = false;
+        pPressedLastFrame = false;
+    }
+
 
     public void update(KeyHandler key, MouseHandler mouse, int screenWidth, int screenHeight) {
         int arenaWidth  = arena.getWidth();
         int arenaHeight = arena.getHeight();
+
+        // Handle pause with P key
+        if (key.pPressed && !pPressedLastFrame) {
+            paused = !paused;
+        }
+        pPressedLastFrame = key.pPressed;
+
+        // If paused, skip all update logic
+        if (paused) {
+            return;
+        }
 
         // Toggle debug mode with O key
         if (key.oPressed) {
@@ -172,33 +244,35 @@ public class GameScreen {
         // Handle mouse drag and drop
         handleDragAndDrop(mouse.leftPressed, mouse.leftClicked, mouse.mouseX, mouse.mouseY, screenWidth, screenHeight);
 
-        // Temporarily disable shooting when chest is open, inventory is open, or dragging
-        boolean wasLeftPressed = mouse.leftPressed;
-        if ((activeChest != null && activeChest.isOpen()) || inventoryOpen || draggedItem != null) {
-            mouse.leftClicked = false;
-            mouse.leftPressed = false;
-        }
+        // Use the shared shooting mechanics method (handles movement, shooting, projectiles)
+        player.handleShootingMechanics(mouse, key, (activeChest != null && activeChest.isOpen()) || inventoryOpen || draggedItem != null, () -> {
+            // Pre-update logic: handle consumables
+            if (mouse.leftClicked) {
+                int selectedSlot = hud.getInventoryUI().getSelectedSlot();
+                if (selectedSlot >= 0 && selectedSlot < 5) {
+                    Object item = player.getHotbar().get(selectedSlot);
+                    if (item instanceof combat.consumables.Consumable) {
+                        combat.consumables.Consumable consumable = (combat.consumables.Consumable) item;
 
-        // Use consumable on left-click when equipped
-        if (mouse.leftClicked) {
-            int selectedSlot = hud.getInventoryUI().getSelectedSlot();
-            if (selectedSlot >= 0 && selectedSlot < 5) {
-                Object item = player.getHotbar().get(selectedSlot);
-                if (item instanceof combat.consumables.Consumable) {
-                    combat.consumables.Consumable consumable = (combat.consumables.Consumable) item;
-                    double healAmount = player.getMaxHp() * consumable.getHealthRestorePercent();
-                    player.heal(healAmount);
-                    player.getHotbar().set(selectedSlot, null);
-                    player.equipHotbarSlot(selectedSlot);
-                    mouse.leftClicked = false; // Prevent shooting after using consumable
+                        // Apply health restore if any
+                        if (consumable.getHealthRestorePercent() > 0) {
+                            double healAmount = player.getMaxHp() * consumable.getHealthRestorePercent();
+                            player.heal(healAmount);
+                        }
+
+                        // Apply effect if it has a duration
+                        if (consumable.getDurationMs() > 0 && consumable.getEffectType() != combat.consumables.Consumable.ConsumableEffectType.NONE) {
+                            player.addConsumableEffect(consumable);
+                        }
+
+                        player.getHotbar().set(selectedSlot, null);
+                        player.equipHotbarSlot(selectedSlot);
+                        mouse.leftClicked = false; // Prevent shooting after using consumable
+                    }
                 }
             }
-        }
+        }, arenaWidth, arenaHeight);
 
-        player.update(key, mouse, arenaWidth, arenaHeight);
-
-        // Restore leftPressed so drag doesn't break (don't restore leftClicked - it's one-shot)
-        mouse.leftPressed = wasLeftPressed;
         camera.follow(player.getX(), player.getY(), player.getW(), player.getL(), screenWidth, screenHeight, arenaWidth, arenaHeight);
         player.setCameraOffset(camera.x, camera.y);
         player.aimBarrel(mouse.mouseX + camera.x, mouse.mouseY + camera.y);
@@ -244,6 +318,30 @@ public class GameScreen {
         // Track player death
         if (player.isDead() && player.getStats().getDeaths() == 0) {
             player.getStats().addDeath();
+        }
+        
+        // Auto-save stats periodically
+        performAutoSave();
+    }
+    
+    /**
+     * Periodically auto-save player stats to prevent data loss
+     */
+    private void performAutoSave() {
+        long currentTime = System.currentTimeMillis();
+        if (lastAutoSaveTime == 0) {
+            lastAutoSaveTime = currentTime;
+        }
+        
+        // Auto-save every interval or when kills change
+        int currentKills = player.getStats().getKills();
+        if (currentTime - lastAutoSaveTime >= AUTO_SAVE_INTERVAL || currentKills > lastSavedKills) {
+            save.SaveManager.quickSaveStats(currentKills, (int) player.getStats().getDamageDealt());
+            lastAutoSaveTime = currentTime;
+            lastSavedKills = currentKills;
+            if (lastSavedKills % 5 == 0 && lastSavedKills > 0) {
+                System.out.println("Auto-saved: " + lastSavedKills + " kills");
+            }
         }
     }
 
@@ -350,11 +448,21 @@ public class GameScreen {
         textWidth = fm.stringWidth(waveText);
         g.drawString(waveText, screenWidth - textWidth - 10, 45);
 
+        // Draw Gold (top left)
+        g.setColor(new Color(255, 215, 0)); // Gold color
+        g.setFont(new java.awt.Font("Arial", Font.BOLD, 18));
+        String goldText = "G " + player.getCurrencyManager().getGold().getAmount();
+        g.drawString(goldText, 10, 30);
+
         // Draw stats panel if visible (bottom left corner)
         if (statsPanelVisible) {
             drawStatsPanel(g, 10, screenHeight - 190);
         }
 
+        // Draw pause menu if paused
+        if (paused) {
+            drawPauseMenu(g, screenWidth, screenHeight);
+        }
     }
 
     private void drawStatsPanel(Graphics2D g, int x, int y) {
@@ -796,6 +904,7 @@ public class GameScreen {
 
         int playerX = player.getCenterX();
         int playerY = player.getCenterY();
+        int effectiveDamage = player.getEffectiveMeleeDamage();
 
         for (entity.Enemy enemy : enemyManager.getEnemies()) {
             // Skip if already hit this swing
@@ -803,8 +912,8 @@ public class GameScreen {
 
             // Check if enemy is within swing arc
             if (melee.isInSwingArc(enemy.getCenterX(), enemy.getCenterY(), playerX, playerY)) {
-                enemy.takeDamage(melee.getDamage());
-                player.getStats().addDamageDealt(melee.getDamage());
+                enemy.takeDamage(effectiveDamage);
+                player.getStats().addDamageDealt(effectiveDamage);
                 melee.getHitEntitiesThisSwing().add(enemy);
 
                 if (enemy.isDead()) {
@@ -827,10 +936,11 @@ public class GameScreen {
 
         int playerX = player.getCenterX();
         int playerY = player.getCenterY();
+        int effectiveDamage = player.getEffectiveMeleeDamage();
 
         if (melee.isInSwingArc(boss.getCenterX(), boss.getCenterY(), playerX, playerY)) {
-            boss.takeDamage(melee.getDamage());
-            player.getStats().addDamageDealt(melee.getDamage());
+            boss.takeDamage(effectiveDamage);
+            player.getStats().addDamageDealt(effectiveDamage);
             melee.getHitEntitiesThisSwing().add(boss);
         }
     }
@@ -966,6 +1076,147 @@ public class GameScreen {
             int numberWidth = fm.stringWidth(number);
             int numberX = startX + boxWidth - 15 - (numberWidth / 2);
             g.drawString(number, numberX, y + 26);
+        }
+    }
+
+    public Player getPlayer() {
+        return player;
+    }
+
+    public WaveManager getWaveManager() { return waveManager; }
+
+    private void drawPauseMenu(Graphics2D g, int screenWidth, int screenHeight) {
+        // Calculate menu box dimensions
+        int menuWidth = screenWidth - (PAUSE_MENU_MARGIN * 2);
+        int menuHeight = screenHeight - (PAUSE_MENU_MARGIN * 2);
+        int menuX = PAUSE_MENU_MARGIN;
+        int menuY = PAUSE_MENU_MARGIN;
+
+        // Draw translucent background
+        g.setColor(new Color(0, 0, 0, 180));
+        g.fillRect(0, 0, screenWidth, screenHeight);
+
+        // Draw menu box
+        g.setColor(new Color(50, 50, 70, 220));
+        g.fillRect(menuX, menuY, menuWidth, menuHeight);
+        g.setColor(Color.WHITE);
+        g.drawRect(menuX, menuY, menuWidth, menuHeight);
+
+        // Draw title
+        g.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 48));
+        String title = "PAUSED";
+        java.awt.FontMetrics fm = g.getFontMetrics();
+        int titleWidth = fm.stringWidth(title);
+        int titleX = menuX + (menuWidth - titleWidth) / 2;
+        int titleY = menuY + 80;
+        g.drawString(title, titleX, titleY);
+
+        // Button dimensions
+        int buttonWidth = 200;
+        int buttonHeight = 50;
+        int buttonSpacing = 20;
+        int totalButtonHeight = (buttonHeight * 4) + (buttonSpacing * 3);
+        int startButtonY = menuY + (menuHeight - totalButtonHeight) / 2;
+
+        // Resume button
+        int settingsX = menuX + (menuWidth - buttonWidth) / 2;
+        int resumeY = startButtonY;
+        drawPauseButton(g, "Resume", settingsX, resumeY, buttonWidth, buttonHeight);
+
+        // Settings button
+        int settingsY = resumeY + buttonHeight + buttonSpacing;
+        drawPauseButton(g, "Settings", settingsX, settingsY, buttonWidth, buttonHeight);
+
+        // Help button
+        int helpY = settingsY + buttonHeight + buttonSpacing;
+        drawPauseButton(g, "Help", settingsX, helpY, buttonWidth, buttonHeight);
+
+        // Quit button
+        int quitY = helpY + buttonHeight + buttonSpacing;
+        drawPauseButton(g, "Quit", settingsX, quitY, buttonWidth, buttonHeight);
+
+        // Instructions
+        g.setFont(new java.awt.Font("Arial", java.awt.Font.PLAIN, 16));
+        String instructions = "Press P to resume";
+        int instructionsWidth = g.getFontMetrics().stringWidth(instructions);
+        int instructionsX = menuX + (menuWidth - instructionsWidth) / 2;
+        int instructionsY = menuY + menuHeight - 40;
+        g.drawString(instructions, instructionsX, instructionsY);
+    }
+
+    private void drawPauseButton(Graphics2D g, String text, int x, int y, int width, int height) {
+        // Button background
+        g.setColor(new Color(100, 100, 150, 200));
+        g.fillRect(x, y, width, height);
+
+        // Button border
+        g.setColor(Color.WHITE);
+        g.drawRect(x, y, width, height);
+
+        // Button text
+        g.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 20));
+        java.awt.FontMetrics fm = g.getFontMetrics();
+        int textWidth = fm.stringWidth(text);
+        int textHeight = fm.getAscent();
+        int textX = x + (width - textWidth) / 2;
+        int textY = y + (height + textHeight) / 2 - 5;
+        g.drawString(text, textX, textY);
+    }
+
+    public void handlePauseMenuClick(int mouseX, int mouseY, int screenWidth, int screenHeight) {
+        if (!paused) return;
+
+        // Calculate menu box dimensions
+        int menuWidth = screenWidth - (PAUSE_MENU_MARGIN * 2);
+        int menuHeight = screenHeight - (PAUSE_MENU_MARGIN * 2);
+        int menuX = PAUSE_MENU_MARGIN;
+        int menuY = PAUSE_MENU_MARGIN;
+
+        // Button dimensions
+        int buttonWidth = 200;
+        int buttonHeight = 50;
+        int buttonSpacing = 20;
+        int totalButtonHeight = (buttonHeight * 4) + (buttonSpacing * 3);
+        int startButtonY = menuY + (menuHeight - totalButtonHeight) / 2;
+
+        int buttonX = menuX + (menuWidth - buttonWidth) / 2;
+
+        // Resume button
+        int resumeY = startButtonY;
+        if (mouseX >= buttonX && mouseX <= buttonX + buttonWidth &&
+            mouseY >= resumeY && mouseY <= resumeY + buttonHeight) {
+            paused = false;
+            return;
+        }
+
+        // Settings button
+        int settingsY = resumeY + buttonHeight + buttonSpacing;
+        if (mouseX >= buttonX && mouseX <= buttonX + buttonWidth &&
+            mouseY >= settingsY && mouseY <= settingsY + buttonHeight) {
+            if (gamePanel != null) {
+                gamePanel.switchScreen("settings");
+            }
+            return;
+        }
+
+        // Help button
+        int helpY = settingsY + buttonHeight + buttonSpacing;
+        if (mouseX >= buttonX && mouseX <= buttonX + buttonWidth &&
+            mouseY >= helpY && mouseY <= helpY + buttonHeight) {
+            if (gamePanel != null) {
+                gamePanel.switchScreen("help");
+            }
+            return;
+        }
+
+        // Quit button
+        int quitY = helpY + buttonHeight + buttonSpacing;
+        if (mouseX >= buttonX && mouseX <= buttonX + buttonWidth &&
+            mouseY >= quitY && mouseY <= quitY + buttonHeight) {
+            if (gamePanel != null) {
+                gamePanel.switchScreen("menu");
+            }
+            return;
         }
     }
 }

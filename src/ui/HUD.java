@@ -1,9 +1,11 @@
 package ui;
 
 import entity.Player;
+import combat.consumables.Consumable;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics2D;
+import java.util.Map;
 
 public class HUD {
 
@@ -59,8 +61,84 @@ public class HUD {
             g.drawString("Weapon: None", 10, 90);
         }
 
+        // Draw active consumable effects (top-left area, below HP/XP bars)
+        drawActiveConsumableEffects(g, player, 10, 130);
+
         // Draw hotbar
         inventoryUI.draw(g, player.getHotbar(), screenWidth, screenHeight);
+    }
+
+    private void drawActiveConsumableEffects(Graphics2D g, Player player, int startX, int startY) {
+        Map<Consumable.ConsumableEffectType, Player.ActiveConsumableEffect> effects = player.getActiveEffects();
+        if (effects.isEmpty()) return;
+
+        int iconSize = 32;
+        int spacing = 8;
+        int currentX = startX;
+        int currentY = startY;
+
+        g.setFont(new Font("Arial", Font.BOLD, 14));
+
+        for (Player.ActiveConsumableEffect effect : effects.values()) {
+            if (effect.isExpired()) continue;
+
+            // Draw icon background
+            Color iconColor = getEffectColor(effect.type);
+            g.setColor(iconColor);
+            g.fillRect(currentX, currentY, iconSize, iconSize);
+
+            // Draw icon border
+            g.setColor(Color.WHITE);
+            g.drawRect(currentX, currentY, iconSize, iconSize);
+
+            // Draw timer text next to icon
+            long remainingSeconds = (effect.getRemainingMs() + 999) / 1000; // Round up
+            String timerText = remainingSeconds + "s";
+
+            g.setColor(Color.WHITE);
+            g.drawString(timerText, currentX + iconSize + 5, currentY + iconSize / 2 + 5);
+
+            // Draw effect name below
+            g.setFont(new Font("Arial", Font.PLAIN, 10));
+            String effectName = getEffectDisplayName(effect.type);
+            g.drawString(effectName, currentX, currentY + iconSize + 12);
+            g.setFont(new Font("Arial", Font.BOLD, 14));
+
+            // Move to next position (horizontal layout)
+            currentX += iconSize + 50;
+
+            // Wrap to next row if too far right (but stay in top-left area)
+            if (currentX > 250) {
+                currentX = startX;
+                currentY += iconSize + 25;
+            }
+        }
+    }
+
+    private Color getEffectColor(Consumable.ConsumableEffectType type) {
+        switch (type) {
+            case DAMAGE_BOOST:
+                return new Color(255, 50, 50); // Red
+            case SPEED_BOOST:
+                return new Color(50, 150, 255); // Blue
+            case DEFENSE_BOOST:
+                return new Color(100, 200, 100); // Green
+            default:
+                return new Color(200, 200, 100); // Yellow
+        }
+    }
+
+    private String getEffectDisplayName(Consumable.ConsumableEffectType type) {
+        switch (type) {
+            case DAMAGE_BOOST:
+                return "DMG x2";
+            case SPEED_BOOST:
+                return "SPD+";
+            case DEFENSE_BOOST:
+                return "DEF+";
+            default:
+                return "BUFF";
+        }
     }
 
     public InventoryUI getInventoryUI() {
