@@ -85,6 +85,8 @@ public class GamePanel extends JPanel implements Runnable {
         customizeScreen = new CustomizeScreen(this);
         settingsScreen = new SettingsScreen(this);
         helpScreen = new HelpScreen(this);
+        // Clear save cache to ensure defaults are loaded fresh
+        SaveManager.clearCache();
         loadoutScreen = new LoadoutScreen(this);
         shopScreen = new ShopScreen(this);
         lootboxTestScreen = new LootboxTestScreen(this);
@@ -181,8 +183,8 @@ public class GamePanel extends JPanel implements Runnable {
                     loadoutScreen.getSelectedPowerTier(),
                     loadoutScreen.getSelectedSummon(),
                     loadoutScreen.getSelectedSummonTier(),
-                    loadoutScreen.getSelectedConsumable(),
-                    loadoutScreen.getSelectedConsumableTier()
+                    "None",  // consumables removed from loadout
+                    1        // consumables removed from loadout
                 );
                 // Reset mouse clicks to prevent auto-shoot
                 gameScreen.resetMouseClicks(mouseHandler);
@@ -199,8 +201,8 @@ public class GamePanel extends JPanel implements Runnable {
                     loadoutScreen.getSelectedPowerTier(),
                     loadoutScreen.getSelectedSummon(),
                     loadoutScreen.getSelectedSummonTier(),
-                    loadoutScreen.getSelectedConsumable(),
-                    loadoutScreen.getSelectedConsumableTier()
+                    "None",  // consumables removed from loadout
+                    1        // consumables removed from loadout
                 );
                 // Reset mouse clicks to prevent auto-shoot
                 hubScreen.resetMouseClicks(mouseHandler);

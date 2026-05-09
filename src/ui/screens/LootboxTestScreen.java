@@ -1,6 +1,8 @@
 package ui.screens;
 
 import combat.Item;
+import combat.lootboxes.ClothesLootbox1;
+import combat.lootboxes.LootBox;
 import combat.lootboxes.Lootbox1;
 import ui.GamePanel;
 import java.awt.Color;
@@ -19,42 +21,56 @@ import java.util.List;
 public class LootboxTestScreen {
 
     private GamePanel gamePanel;
-    private Lootbox1 testLootbox;
+    private LootBox selectedLootbox;
+    private String selectedLootboxName = null;
 
     private Rectangle backBtn = new Rectangle(10, 10, 80, 40);
-    private Rectangle x1Btn = new Rectangle(150, 10, 100, 40);
-    private Rectangle x5Btn = new Rectangle(260, 10, 100, 40);
-    private Rectangle x10Btn = new Rectangle(370, 10, 100, 40);
-    private Rectangle x25Btn = new Rectangle(480, 10, 100, 40);
-    private Rectangle x100Btn = new Rectangle(590, 10, 100, 40);
+    private Rectangle x1Btn = new Rectangle(150, 60, 100, 40);
+    private Rectangle x5Btn = new Rectangle(260, 60, 100, 40);
+    private Rectangle x10Btn = new Rectangle(370, 60, 100, 40);
+    private Rectangle x25Btn = new Rectangle(480, 60, 100, 40);
+    private Rectangle x100Btn = new Rectangle(590, 60, 100, 40);
+    
+    // Lootbox selection buttons
+    private Rectangle testCrateBtn = new Rectangle(150, 10, 120, 40);
+    private Rectangle clothesCrateBtn = new Rectangle(280, 10, 140, 40);
 
     private List<LootResult> results = new ArrayList<>();
 
     public LootboxTestScreen(GamePanel gamePanel) {
         this.gamePanel = gamePanel;
-        this.testLootbox = new Lootbox1();
     }
 
     public void handleClick(int x, int y) {
         if (backBtn.contains(x, y)) {
             gamePanel.switchScreen("menu");
-        } else if (x1Btn.contains(x, y)) {
+        } else if (testCrateBtn.contains(x, y)) {
+            selectedLootbox = new Lootbox1();
+            selectedLootboxName = "Test Crate";
+            results.clear();
+        } else if (clothesCrateBtn.contains(x, y)) {
+            selectedLootbox = new ClothesLootbox1();
+            selectedLootboxName = "Clothes Crate 1";
+            results.clear();
+        } else if (selectedLootbox != null && x1Btn.contains(x, y)) {
             rollLootbox(1);
-        } else if (x5Btn.contains(x, y)) {
+        } else if (selectedLootbox != null && x5Btn.contains(x, y)) {
             rollLootbox(5);
-        } else if (x10Btn.contains(x, y)) {
+        } else if (selectedLootbox != null && x10Btn.contains(x, y)) {
             rollLootbox(10);
-        } else if (x25Btn.contains(x, y)) {
+        } else if (selectedLootbox != null && x25Btn.contains(x, y)) {
             rollLootbox(25);
-        } else if (x100Btn.contains(x, y)) {
+        } else if (selectedLootbox != null && x100Btn.contains(x, y)) {
             rollLootbox(100);
         }
     }
 
     private void rollLootbox(int count) {
+        if (selectedLootbox == null) return;
+        
         results.clear();
         for (int i = 0; i < count; i++) {
-            Item item = testLootbox.open();
+            Item item = selectedLootbox.open();
             if (item != null) {
                 LootResult result = new LootResult(item);
                 results.add(result);
@@ -79,20 +95,57 @@ public class LootboxTestScreen {
         String backText = "Back";
         g.drawString(backText, backBtn.x + (backBtn.width - fm.stringWidth(backText)) / 2,
                 backBtn.y + (backBtn.height + fm.getAscent() - fm.getDescent()) / 2);
+        
+        // Lootbox selection buttons
+        drawLootboxSelectionButton(g, testCrateBtn, "Test Crate", "test");
+        drawLootboxSelectionButton(g, clothesCrateBtn, "Clothes Crate 1", "clothes");
+        
+        // Selected lootbox display
+        g.setFont(new Font("Arial", Font.BOLD, 14));
+        g.setColor(Color.WHITE);
+        if (selectedLootboxName != null) {
+            g.drawString("Selected: " + selectedLootboxName, 430, 35);
+        } else {
+            g.setColor(new Color(255, 100, 100));
+            g.drawString("Select a loot box to begin", 430, 35);
+        }
 
-        // Roll buttons
-        drawRollButton(g, x1Btn, "x1");
-        drawRollButton(g, x5Btn, "x5");
-        drawRollButton(g, x10Btn, "x10");
-        drawRollButton(g, x25Btn, "x25");
-        drawRollButton(g, x100Btn, "x100");
+        // Roll buttons (disabled if no lootbox selected)
+        boolean canRoll = selectedLootbox != null;
+        drawRollButton(g, x1Btn, "x1", canRoll);
+        drawRollButton(g, x5Btn, "x5", canRoll);
+        drawRollButton(g, x10Btn, "x10", canRoll);
+        drawRollButton(g, x25Btn, "x25", canRoll);
+        drawRollButton(g, x100Btn, "x100", canRoll);
 
         // Draw results grid
         drawResultsGrid(g);
     }
 
-    private void drawRollButton(Graphics2D g, Rectangle btn, String label) {
-        g.setColor(new Color(100, 150, 100));
+    private void drawRollButton(Graphics2D g, Rectangle btn, String label, boolean enabled) {
+        if (enabled) {
+            g.setColor(new Color(100, 150, 100));
+        } else {
+            g.setColor(new Color(60, 60, 60)); // Grayed out when disabled
+        }
+        g.fill(btn);
+        g.setColor(enabled ? Color.WHITE : new Color(150, 150, 150));
+        g.draw(btn);
+        g.setFont(new Font("Arial", Font.BOLD, 14));
+        FontMetrics fm = g.getFontMetrics();
+        g.drawString(label, btn.x + (btn.width - fm.stringWidth(label)) / 2,
+                btn.y + (btn.height + fm.getAscent() - fm.getDescent()) / 2);
+    }
+    
+    private void drawLootboxSelectionButton(Graphics2D g, Rectangle btn, String label, String type) {
+        boolean isSelected = (type.equals("test") && selectedLootbox instanceof Lootbox1) ||
+                            (type.equals("clothes") && selectedLootbox instanceof ClothesLootbox1);
+        
+        if (isSelected) {
+            g.setColor(new Color(100, 200, 255));
+        } else {
+            g.setColor(new Color(80, 80, 100));
+        }
         g.fill(btn);
         g.setColor(Color.WHITE);
         g.draw(btn);

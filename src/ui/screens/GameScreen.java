@@ -476,31 +476,37 @@ public class GameScreen {
             }
         }
         int hpMultiplier = charmCount * 10; // Each charm gives 10%
-        double damageMultiplier = (player.getDamage() - 1.0) * 100; // Convert to percentage
-        double speedMultiplier = (player.getSpeed() - 7.0) / 7.0 * 100; // Base speed is 7.0
+        // Calculate level-based multipliers (level 1 = base)
+        int playerLevel = player.getPlayerLevel();
+        double damageFromLevel = (playerLevel - 1) * 0.05;
+        double speedFromLevel = (playerLevel - 1) * 0.2;
+        double totalDamageMultiplier = (player.getDamage() - 1.0) * 100;
+        double totalSpeedMultiplier = ((player.getSpeed() - 7.0) / 7.0) * 100;
 
         // Panel background
         int panelWidth = 200;
-        int panelHeight = 180;
+        int panelHeight = 200;
         g.setColor(new Color(0, 0, 0, 180));
         g.fillRect(x, y, panelWidth, panelHeight);
         g.setColor(Color.WHITE);
         g.drawRect(x, y, panelWidth, panelHeight);
 
-        // Title
+        // Title with player level
         g.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 14));
-        g.drawString("=== STATS ===", x + 10, y + 20);
+        g.drawString("=== LEVEL " + playerLevel + " ===", x + 10, y + 20);
 
         // Stats
         g.setFont(new java.awt.Font("Arial", java.awt.Font.PLAIN, 12));
         int lineY = y + 40;
         int lineHeight = 16;
 
+        g.drawString("Base HP: " + (int)(200 + (playerLevel - 1) * 20), x + 10, lineY);
+        lineY += lineHeight;
         g.drawString("HP Multiplier: +" + hpMultiplier + "%", x + 10, lineY);
         lineY += lineHeight;
-        g.drawString("Damage Multiplier: +" + (int)damageMultiplier + "%", x + 10, lineY);
+        g.drawString("Damage Multiplier: +" + (int)totalDamageMultiplier + "%", x + 10, lineY);
         lineY += lineHeight;
-        g.drawString("Speed Multiplier: +" + (int)speedMultiplier + "%", x + 10, lineY);
+        g.drawString("Speed Multiplier: +" + (int)totalSpeedMultiplier + "%", x + 10, lineY);
         lineY += lineHeight;
         g.drawString("---", x + 10, lineY);
         lineY += lineHeight;
@@ -510,11 +516,7 @@ public class GameScreen {
         lineY += lineHeight;
         g.drawString("Damage Dealt: " + (int)stats.getDamageDealt(), x + 10, lineY);
         lineY += lineHeight;
-        g.drawString("Damage Taken: " + (int)stats.getDamageTaken(), x + 10, lineY);
-        lineY += lineHeight;
         g.drawString("Accuracy: " + String.format("%.1f", stats.getAccuracy()) + "%", x + 10, lineY);
-        lineY += lineHeight;
-        g.drawString("Shots: " + stats.getShotsHit() + "/" + stats.getShotsFired(), x + 10, lineY);
     }
 
     private void drawChest(Graphics2D g, Chest chest) {

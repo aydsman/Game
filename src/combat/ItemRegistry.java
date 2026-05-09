@@ -12,6 +12,10 @@ import combat.ranged.smgs.SMG1;
 import combat.ranged.snipers.Sniper1;
 import combat.charms.Charm1;
 import combat.charms.SpeedCharm;
+import combat.charms.SpeedCharm2;
+import combat.charms.SpeedCharm3;
+import combat.charms.HealthCharm2;
+import combat.charms.HealthCharm3;
 import combat.summons.Summon1;
 import combat.powers.Fire;
 import combat.powers.Light;
@@ -27,12 +31,17 @@ import combat.powers.WaterV2;
 import combat.powers.Infinity;
 import combat.powers.KingOfCurses;
 import combat.powers.RinneSharingan;
+import combat.powers.Rinnegan;
+import combat.powers.Sharingan;
 import combat.consumables.Consumable1;
 import combat.consumables.Consumable2;
 import combat.consumables.Consumable3;
 import combat.consumables.DamagePotion;
 import combat.consumables.DamagePotion2;
 import combat.consumables.DamagePotion3;
+import combat.consumables.SpeedPotion1;
+import combat.consumables.SpeedPotion2;
+import combat.consumables.SpeedPotion3;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -74,8 +83,13 @@ public class ItemRegistry {
         weapons.add(new Scythe1(1));
 
         // Register other item types with their fixed tiers
-        charms.add(new Charm1()); // Tier 1
-        charms.add(new SpeedCharm()); // Tier 1 - +5% speed
+        // Charms sorted by type: Health charms first (tier 1-3), then Speed charms (tier 1-3)
+        charms.add(new Charm1()); // Simple Health Charm - Tier 1
+        charms.add(new HealthCharm2()); // Health Charm - Tier 2
+        charms.add(new HealthCharm3()); // Advanced Health Charm - Tier 3
+        charms.add(new SpeedCharm()); // Simple Speed Charm - Tier 1
+        charms.add(new SpeedCharm2()); // Speed Charm - Tier 2
+        charms.add(new SpeedCharm3()); // Advanced Speed Charm - Tier 3
         summons.add(new Summon1()); // Tier 1
 
         // Powers sorted by name, then by tier
@@ -85,10 +99,12 @@ public class ItemRegistry {
         powers.add(new Lightning()); // Tier 1
         powers.add(new Water()); // Tier 1
         powers.add(new Magma()); // Tier 2
+        powers.add(new Sharingan(3)); // Tier 3
         powers.add(new EarthV2()); // Tier 4
         powers.add(new FireV2()); // Tier 4
         powers.add(new LightningV2()); // Tier 4
         powers.add(new MagmaV2()); // Tier 4
+        powers.add(new Rinnegan(4)); // Tier 4
         powers.add(new WaterV2()); // Tier 4
         powers.add(new Infinity()); // Tier 5
         powers.add(new KingOfCurses()); // Tier 5
@@ -101,6 +117,9 @@ public class ItemRegistry {
         consumables.add(new DamagePotion()); // Tier 1 - doubles damage for 10 seconds
         consumables.add(new DamagePotion2()); // Tier 3 - doubles damage for 15 seconds
         consumables.add(new DamagePotion3()); // Tier 4 - doubles damage for 20 seconds
+        consumables.add(new SpeedPotion1()); // Tier 1 - small speed boost
+        consumables.add(new SpeedPotion2()); // Tier 2 - medium speed boost
+        consumables.add(new SpeedPotion3()); // Tier 3 - large speed boost
 
         // Add all to combined list
         allItems.addAll(weapons);

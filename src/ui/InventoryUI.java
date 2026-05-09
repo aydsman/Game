@@ -3,7 +3,14 @@ package ui;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.imageio.ImageIO;
 
 import combat.Item;
 
@@ -12,6 +19,8 @@ public class InventoryUI {
     private int slotSize = 50; // Size of each hotbar slot
     private int slotSpacing = 5; // Space between slots
     private int selectedSlot = 0; // Currently selected slot (0-4)
+
+    private Map<String, BufferedImage> iconCache = new HashMap<>();
 
     public void draw(Graphics2D g, ArrayList<Object> hotbar, int screenWidth, int screenHeight) {
         // Calculate starting position to center hotbar at bottom
@@ -36,6 +45,12 @@ public class InventoryUI {
                 Object item = hotbar.get(i);
                 if (item instanceof Item) {
                     Item weapon = (Item) item;
+                    BufferedImage icon = getIcon(weapon.getIconPath());
+                    if (icon != null) {
+                        int iconX = slotX + (slotSize - icon.getWidth()) / 2;
+                        int iconY = startY + (slotSize - icon.getHeight()) / 2;
+                        g.drawImage(icon, iconX, iconY, null);
+                    }
                     g.setColor(Color.WHITE);
                     g.setFont(new Font("Arial", Font.PLAIN, 10));
                     String name = weapon.getName();
@@ -67,5 +82,20 @@ public class InventoryUI {
 
     public int getSelectedSlot() {
         return selectedSlot;
+    }
+
+    private BufferedImage getIcon(String iconPath) {
+        if (iconPath == null || iconPath.isEmpty()) return null;
+        if (iconCache.containsKey(iconPath)) {
+            return iconCache.get(iconPath);
+        }
+        try {
+            BufferedImage img = ImageIO.read(new File(iconPath));
+            iconCache.put(iconPath, img);
+            return img;
+        } catch (IOException e) {
+            System.err.println("Failed to load icon: " + iconPath);
+            return null;
+        }
     }
 }

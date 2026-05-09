@@ -1,34 +1,49 @@
 package ui.screens;
 
 import ui.GamePanel;
-import java.awt.Color;
-import java.awt.Font;
-import java.awt.FontMetrics;
-import java.awt.Graphics2D;
-import java.awt.Rectangle;
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import javax.imageio.ImageIO;
+import javax.swing.ImageIcon;
+import java.io.File;
+import java.io.IOException;
 
 public class MenuScreen {
 
     private GamePanel gamePanel;
+    private ImageIcon menuBackground;
+    private String hoveredButton = null;
 
-    private Rectangle arenaBtn     = new Rectangle(680, 200, 115, 50);
-    private Rectangle dungeonBtn   = new Rectangle(805, 200, 115, 50);
-    private Rectangle hubBtn       = new Rectangle(680, 260, 240, 50);
-    private Rectangle loadoutBtn   = new Rectangle(680, 320, 240, 50);
-    private Rectangle customizeBtn = new Rectangle(680, 400, 240, 50);
-    private Rectangle shopBtn      = new Rectangle(680, 480, 240, 50);
-    private Rectangle settingsBtn  = new Rectangle(680, 560, 240, 50);
-    private Rectangle helpBtn         = new Rectangle(680, 640, 240, 50);
-    private Rectangle graphTestBtn    = new Rectangle(10, 850, 140, 30);
-    private Rectangle itemsBtn        = new Rectangle(160, 850, 140, 30);
-    private Rectangle lootboxTestBtn  = new Rectangle(310, 850, 140, 30);
-    private Rectangle statsBtn        = new Rectangle(460, 850, 140, 30);
+    // Main menu buttons (redesigned)
+    private Rectangle arenaBtn     = new Rectangle(680, 200, 115, 60);
+    private Rectangle dungeonBtn   = new Rectangle(805, 200, 115, 60);
+    private Rectangle hubBtn       = new Rectangle(680, 280, 240, 60);
+    private Rectangle loadoutBtn   = new Rectangle(680, 360, 240, 60);
+    private Rectangle customizeBtn = new Rectangle(680, 440, 240, 60);
+    private Rectangle shopBtn      = new Rectangle(680, 520, 240, 60);
+    private Rectangle settingsBtn  = new Rectangle(680, 600, 240, 60);
+    private Rectangle helpBtn      = new Rectangle(680, 680, 240, 60);
+    
+    // Debug/utility buttons (bottom row)
+    private Rectangle graphTestBtn    = new Rectangle(10, 850, 140, 40);
+    private Rectangle itemsBtn        = new Rectangle(160, 850, 140, 40);
+    private Rectangle lootboxTestBtn  = new Rectangle(310, 850, 140, 40);
+    private Rectangle statsBtn        = new Rectangle(460, 850, 140, 40);
     private Rectangle resetBtn        = new Rectangle(1450, 850, 140, 40);
     
     private boolean showStatsPanel = false;
 
     public MenuScreen(GamePanel gamePanel) {
         this.gamePanel = gamePanel;
+        loadMenuBackground();
+    }
+    
+    private void loadMenuBackground() {
+        try {
+            menuBackground = new ImageIcon("assets/background/menu/menu.gif");
+        } catch (Exception e) {
+            System.err.println("Failed to load menu background: " + e.getMessage());
+        }
     }
 
     public void handleClick(int x, int y) {
@@ -66,87 +81,66 @@ public class MenuScreen {
     }
 
     public void draw(Graphics2D g) {
-        g.setColor(new Color(30, 30, 30));
-        g.fillRect(0, 0, 1600, 900);
+        // Draw menu background (animated GIF support, scaled larger to hide name at bottom)
+        if (menuBackground != null) {
+            g.drawImage(menuBackground.getImage(), -80, -60, 1760, 1020, null);
+        } else {
+            // Fallback gradient background
+            GradientPaint bgGradient = new GradientPaint(0, 0, new Color(30, 30, 40), 0, 900, new Color(20, 20, 30));
+            g.setPaint(bgGradient);
+            g.fillRect(0, 0, 1600, 900);
+        }
 
-        // Draw currencies in top left corner
+        // Draw currencies in top left corner with modern styling
         drawCurrencies(g);
 
+        // Title with pixel font and better readability
         g.setColor(Color.WHITE);
-        g.setFont(new Font("Arial", Font.BOLD, 52));
+        Font pixelFont = new Font("Press Start 2P", Font.BOLD, 72);
+        if (!pixelFont.getFamily().equals("Press Start 2P")) {
+            // Fallback to Monospaced if pixel font not available
+            pixelFont = new Font("Monospaced", Font.BOLD, 72);
+        }
+        g.setFont(pixelFont);
         FontMetrics fm = g.getFontMetrics();
         String title = "Abyss";
-        g.drawString(title, (1600 - fm.stringWidth(title)) / 2, 150);
+        int titleX = (1600 - fm.stringWidth(title)) / 2;
+        g.drawString(title, titleX, 140);
 
-        drawButton(g, arenaBtn, "Arena");
-        drawButton(g, dungeonBtn, "Dungeon");
-        drawButton(g, hubBtn, "Hub");
-        drawButton(g, loadoutBtn, "Loadout");
-        drawButton(g, customizeBtn, "Customize");
-        drawButton(g, shopBtn, "Shop");
-        drawButton(g, settingsBtn, "Settings");
-        drawButton(g, helpBtn, "Help");
+        // Subtitle
+        g.setColor(new Color(200, 200, 220));
+        Font pixelFontSmall = new Font("Press Start 2P", Font.PLAIN, 16);
+        if (!pixelFontSmall.getFamily().equals("Press Start 2P")) {
+            pixelFontSmall = new Font("Monospaced", Font.PLAIN, 16);
+        }
+        g.setFont(pixelFontSmall);
+        String subtitle = "Choose your path";
+        int subtitleX = (1600 - g.getFontMetrics().stringWidth(subtitle)) / 2;
+        g.drawString(subtitle, subtitleX, 165);
 
-        // Draw Graph Test button (bottom left)
-        g.setColor(new Color(70, 70, 70));
-        g.fill(graphTestBtn);
-        g.setColor(Color.WHITE);
-        g.draw(graphTestBtn);
-        g.setFont(new Font("Arial", Font.PLAIN, 12));
-        FontMetrics btnFm = g.getFontMetrics();
-        String btnText = "Graph Test";
-        int btnTextX = graphTestBtn.x + (graphTestBtn.width - btnFm.stringWidth(btnText)) / 2;
-        int btnTextY = graphTestBtn.y + (graphTestBtn.height + btnFm.getAscent() - btnFm.getDescent()) / 2;
-        g.drawString(btnText, btnTextX, btnTextY);
+        // Main menu buttons with modern styling
+        drawStyledButton(g, arenaBtn, "Arena", new Color(231, 76, 60), hoveredButton == "arena");
+        drawStyledButton(g, dungeonBtn, "Dungeon", new Color(192, 57, 43), hoveredButton == "dungeon");
+        drawStyledButton(g, hubBtn, "Hub", new Color(52, 152, 219), hoveredButton == "hub");
+        drawStyledButton(g, loadoutBtn, "Loadout", new Color(147, 112, 219), hoveredButton == "loadout");
+        drawStyledButton(g, customizeBtn, "Customize", new Color(155, 89, 182), hoveredButton == "customize");
+        drawStyledButton(g, shopBtn, "Shop", new Color(46, 204, 113), hoveredButton == "shop");
+        drawStyledButton(g, settingsBtn, "Settings", new Color(149, 165, 166), hoveredButton == "settings");
+        drawStyledButton(g, helpBtn, "Help", new Color(149, 165, 166), hoveredButton == "help");
 
-        // Draw Items button (next to Graph Test)
-        g.setColor(new Color(70, 70, 70));
-        g.fill(itemsBtn);
-        g.setColor(Color.WHITE);
-        g.draw(itemsBtn);
-        g.setFont(new Font("Arial", Font.PLAIN, 12));
-        String itemsText = "Gallery";
-        int itemsTextX = itemsBtn.x + (itemsBtn.width - btnFm.stringWidth(itemsText)) / 2;
-        int itemsTextY = itemsBtn.y + (itemsBtn.height + btnFm.getAscent() - btnFm.getDescent()) / 2;
-        g.drawString(itemsText, itemsTextX, itemsTextY);
-
-        // Draw Lootbox Test button (next to Gallery)
-        g.setColor(new Color(70, 70, 70));
-        g.fill(lootboxTestBtn);
-        g.setColor(Color.WHITE);
-        g.draw(lootboxTestBtn);
-        g.setFont(new Font("Arial", Font.PLAIN, 12));
-        String lootboxText = "Lootbox Test";
-        int lootboxTextX = lootboxTestBtn.x + (lootboxTestBtn.width - btnFm.stringWidth(lootboxText)) / 2;
-        int lootboxTextY = lootboxTestBtn.y + (lootboxTestBtn.height + btnFm.getAscent() - btnFm.getDescent()) / 2;
-        g.drawString(lootboxText, lootboxTextX, lootboxTextY);
-
-        // Draw Stats button (next to Lootbox Test)
-        g.setColor(new Color(70, 70, 70));
-        g.fill(statsBtn);
-        g.setColor(Color.WHITE);
-        g.draw(statsBtn);
-        g.setFont(new Font("Arial", Font.PLAIN, 12));
-        String statsText = "Stats";
-        int statsTextX = statsBtn.x + (statsBtn.width - btnFm.stringWidth(statsText)) / 2;
-        int statsTextY = statsBtn.y + (statsBtn.height + btnFm.getAscent() - btnFm.getDescent()) / 2;
-        g.drawString(statsText, statsTextX, statsTextY);
-
+        // Debug/utility buttons with modern styling
+        drawStyledSmallButton(g, graphTestBtn, "Graph Test", hoveredButton == "graph");
+        drawStyledSmallButton(g, itemsBtn, "Gallery", hoveredButton == "items");
+        drawStyledSmallButton(g, lootboxTestBtn, "Lootbox Test", hoveredButton == "lootbox");
+        drawStyledSmallButton(g, statsBtn, "Stats", hoveredButton == "stats");
+        
         // Draw Stats Panel if visible
         if (showStatsPanel) {
             drawStatsPanel(g);
         }
 
-        // Draw Reset button (bottom right) - RED color to indicate danger
-        g.setColor(new Color(180, 50, 50));
-        g.fill(resetBtn);
-        g.setColor(Color.WHITE);
-        g.draw(resetBtn);
-        g.setFont(new Font("Arial", Font.BOLD, 14));
-        String resetText = "RESET";
-        int resetTextX = resetBtn.x + (resetBtn.width - btnFm.stringWidth(resetText)) / 2;
-        int resetTextY = resetBtn.y + (resetBtn.height + btnFm.getAscent() - btnFm.getDescent()) / 2;
-        g.drawString(resetText, resetTextX, resetTextY);
+        // Draw Reset button (danger button)
+        drawStyledResetButton(g, resetBtn, "RESET", hoveredButton == "reset");
     }
 
     private void drawStatsPanel(Graphics2D g) {
@@ -155,15 +149,20 @@ public class MenuScreen {
         int panelWidth = 800;
         int panelHeight = 500;
         
-        // Semi-transparent dark background
-        g.setColor(new Color(30, 30, 30, 240));
-        g.fillRect(panelX, panelY, panelWidth, panelHeight);
-        g.setColor(Color.WHITE);
-        g.drawRect(panelX, panelY, panelWidth, panelHeight);
+        // Modern panel background with gradient border
+        g.setColor(new Color(0, 0, 0, 220));
+        g.fillRoundRect(panelX, panelY, panelWidth, panelHeight, 16, 16);
+        
+        GradientPaint borderGradient = new GradientPaint(panelX, panelY, new Color(100, 200, 255), panelX + panelWidth, panelY + panelHeight, new Color(147, 112, 219));
+        g.setPaint(borderGradient);
+        g.setStroke(new BasicStroke(3));
+        g.drawRoundRect(panelX, panelY, panelWidth, panelHeight, 16, 16);
+        g.setStroke(new BasicStroke(1));
+        g.setPaint(null);
         
         // Title
-        g.setFont(new Font("Arial", Font.BOLD, 32));
-        g.setColor(Color.WHITE);
+        g.setFont(new Font("Segoe UI", Font.BOLD, 32));
+        g.setColor(new Color(100, 200, 255));
         String title = "PLAYER STATS";
         int titleX = panelX + (panelWidth - g.getFontMetrics().stringWidth(title)) / 2;
         g.drawString(title, titleX, panelY + 50);
@@ -174,41 +173,47 @@ public class MenuScreen {
         // Level and XP Bar
         int level = data.getPlayerLevel();
         int xp = data.getPlayerXP();
-        int xpNeeded = level * 100; // Simple formula: need level*100 XP for next level
+        int xpNeeded = level * 100;
         
-        g.setFont(new Font("Arial", Font.BOLD, 24));
+        g.setFont(new Font("Segoe UI", Font.BOLD, 28));
+        g.setColor(new Color(255, 215, 0));
         String levelText = "Level " + level;
         g.drawString(levelText, panelX + 50, panelY + 100);
         
         // XP Bar
         int barX = panelX + 200;
-        int barY = panelY + 80;
+        int barY = panelY + 75;
         int barWidth = 500;
-        int barHeight = 30;
+        int barHeight = 35;
         
         // Bar background
-        g.setColor(new Color(50, 50, 50));
-        g.fillRect(barX, barY, barWidth, barHeight);
+        g.setColor(new Color(50, 50, 60));
+        g.fillRoundRect(barX, barY, barWidth, barHeight, 8, 8);
         
         // XP fill
         double xpProgress = Math.min(1.0, (double) xp / xpNeeded);
         int fillWidth = (int) (barWidth * xpProgress);
-        g.setColor(new Color(0, 191, 255)); // Blue for XP
-        g.fillRect(barX, barY, fillWidth, barHeight);
+        GradientPaint xpGradient = new GradientPaint(barX, barY, new Color(100, 200, 255), barX + fillWidth, barY, new Color(0, 191, 255));
+        g.setPaint(xpGradient);
+        g.fillRoundRect(barX, barY, fillWidth, barHeight, 8, 8);
+        g.setPaint(null);
         
         // Bar border
-        g.setColor(Color.WHITE);
-        g.drawRect(barX, barY, barWidth, barHeight);
+        g.setColor(new Color(100, 200, 255));
+        g.setStroke(new BasicStroke(2));
+        g.drawRoundRect(barX, barY, barWidth, barHeight, 8, 8);
+        g.setStroke(new BasicStroke(1));
         
         // XP text
-        g.setFont(new Font("Arial", Font.PLAIN, 14));
+        g.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        g.setColor(Color.WHITE);
         String xpText = xp + " / " + xpNeeded + " XP";
         int xpTextX = barX + (barWidth - g.getFontMetrics().stringWidth(xpText)) / 2;
-        int xpTextY = barY + 20;
+        int xpTextY = barY + 22;
         g.drawString(xpText, xpTextX, xpTextY);
         
         // Stats grid
-        g.setFont(new Font("Arial", Font.PLAIN, 18));
+        g.setFont(new Font("Segoe UI", Font.PLAIN, 18));
         int statsX = panelX + 100;
         int statsY = panelY + 160;
         int lineHeight = 35;
@@ -222,26 +227,94 @@ public class MenuScreen {
         
         // Column 2 - Currency
         int col2X = panelX + 450;
-        g.setColor(new Color(34, 139, 34)); // Green for cash
+        g.setColor(new Color(46, 204, 113));
         g.drawString("Cash: $" + data.getCash(), col2X, statsY);
-        g.setColor(new Color(0, 191, 255)); // Blue for gems
+        g.setColor(new Color(52, 152, 219));
         g.drawString("Gems: ◆" + data.getGems(), col2X, statsY + lineHeight);
         
         // Close instruction
-        g.setColor(new Color(150, 150, 150));
-        g.setFont(new Font("Arial", Font.ITALIC, 14));
+        g.setColor(new Color(150, 150, 170));
+        g.setFont(new Font("Segoe UI", Font.ITALIC, 14));
         String closeText = "Click Stats button again to close";
         int closeX = panelX + (panelWidth - g.getFontMetrics().stringWidth(closeText)) / 2;
         g.drawString(closeText, closeX, panelY + panelHeight - 30);
     }
 
-    private void drawButton(Graphics2D g, Rectangle btn, String label) {
-        g.setColor(new Color(70, 70, 70));
-        g.fill(btn);
-        g.setColor(Color.WHITE);
-        g.draw(btn);
+    private void drawStyledButton(Graphics2D g, Rectangle btn, String label, Color accentColor, boolean isHovered) {
+        // Button background with gradient
+        if (isHovered) {
+            GradientPaint gradient = new GradientPaint(btn.x, btn.y, accentColor.brighter(), btn.x, btn.y + btn.height, accentColor);
+            g.setPaint(gradient);
+        } else {
+            GradientPaint gradient = new GradientPaint(btn.x, btn.y, new Color(50, 50, 60), btn.x, btn.y + btn.height, new Color(40, 40, 50));
+            g.setPaint(gradient);
+        }
+        g.fillRoundRect(btn.x, btn.y, btn.width, btn.height, 12, 12);
+        g.setPaint(null);
 
-        g.setFont(new Font("Arial", Font.PLAIN, 20));
+        // Border
+        g.setColor(isHovered ? accentColor : new Color(80, 80, 90));
+        g.setStroke(new BasicStroke(2));
+        g.drawRoundRect(btn.x, btn.y, btn.width, btn.height, 12, 12);
+        g.setStroke(new BasicStroke(1));
+
+        // Text
+        g.setColor(Color.WHITE);
+        g.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        FontMetrics fm = g.getFontMetrics();
+        int textX = btn.x + (btn.width - fm.stringWidth(label)) / 2;
+        int textY = btn.y + (btn.height + fm.getAscent() - fm.getDescent()) / 2;
+        g.drawString(label, textX, textY);
+    }
+
+    private void drawStyledSmallButton(Graphics2D g, Rectangle btn, String label, boolean isHovered) {
+        // Button background with gradient
+        if (isHovered) {
+            GradientPaint gradient = new GradientPaint(btn.x, btn.y, new Color(100, 100, 120), btn.x, btn.y + btn.height, new Color(70, 70, 90));
+            g.setPaint(gradient);
+        } else {
+            GradientPaint gradient = new GradientPaint(btn.x, btn.y, new Color(50, 50, 60), btn.x, btn.y + btn.height, new Color(40, 40, 50));
+            g.setPaint(gradient);
+        }
+        g.fillRoundRect(btn.x, btn.y, btn.width, btn.height, 8, 8);
+        g.setPaint(null);
+
+        // Border
+        g.setColor(isHovered ? new Color(100, 200, 255) : new Color(70, 70, 80));
+        g.setStroke(new BasicStroke(2));
+        g.drawRoundRect(btn.x, btn.y, btn.width, btn.height, 8, 8);
+        g.setStroke(new BasicStroke(1));
+
+        // Text
+        g.setColor(Color.WHITE);
+        g.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        FontMetrics fm = g.getFontMetrics();
+        int textX = btn.x + (btn.width - fm.stringWidth(label)) / 2;
+        int textY = btn.y + (btn.height + fm.getAscent() - fm.getDescent()) / 2;
+        g.drawString(label, textX, textY);
+    }
+
+    private void drawStyledResetButton(Graphics2D g, Rectangle btn, String label, boolean isHovered) {
+        // Danger button with red gradient
+        if (isHovered) {
+            GradientPaint gradient = new GradientPaint(btn.x, btn.y, new Color(220, 80, 80), btn.x, btn.y + btn.height, new Color(180, 50, 50));
+            g.setPaint(gradient);
+        } else {
+            GradientPaint gradient = new GradientPaint(btn.x, btn.y, new Color(180, 50, 50), btn.x, btn.y + btn.height, new Color(150, 40, 40));
+            g.setPaint(gradient);
+        }
+        g.fillRoundRect(btn.x, btn.y, btn.width, btn.height, 8, 8);
+        g.setPaint(null);
+
+        // Border
+        g.setColor(isHovered ? new Color(255, 100, 100) : new Color(200, 70, 70));
+        g.setStroke(new BasicStroke(2));
+        g.drawRoundRect(btn.x, btn.y, btn.width, btn.height, 8, 8);
+        g.setStroke(new BasicStroke(1));
+
+        // Text
+        g.setColor(Color.WHITE);
+        g.setFont(new Font("Segoe UI", Font.BOLD, 14));
         FontMetrics fm = g.getFontMetrics();
         int textX = btn.x + (btn.width - fm.stringWidth(label)) / 2;
         int textY = btn.y + (btn.height + fm.getAscent() - fm.getDescent()) / 2;
@@ -251,17 +324,25 @@ public class MenuScreen {
     private void drawCurrencies(Graphics2D g) {
         int x = 20;
         int y = 30;
-        int spacing = 25;
+        int spacing = 30;
 
-        g.setFont(new Font("Arial", Font.BOLD, 18));
+        // Draw currency panel background
+        g.setColor(new Color(0, 0, 0, 150));
+        g.fillRoundRect(x - 10, y - 25, 200, 70, 12, 12);
+        g.setColor(new Color(100, 100, 120));
+        g.setStroke(new BasicStroke(2));
+        g.drawRoundRect(x - 10, y - 25, 200, 70, 12, 12);
+        g.setStroke(new BasicStroke(1));
+
+        g.setFont(new Font("Segoe UI", Font.BOLD, 18));
 
         // Cash (permanent currency)
-        g.setColor(new Color(34, 139, 34)); // Green color
+        g.setColor(new Color(46, 204, 113));
         String cashText = "$ " + gamePanel.getCurrencyManager().getCash().getAmount();
         g.drawString(cashText, x, y);
 
         // Gems (permanent currency)
-        g.setColor(new Color(0, 191, 255)); // Blue color
+        g.setColor(new Color(52, 152, 219));
         String gemsText = "◆ " + gamePanel.getCurrencyManager().getGems().getAmount();
         g.drawString(gemsText, x, y + spacing);
     }

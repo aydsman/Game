@@ -31,16 +31,19 @@ public class HUD {
         g.setColor(Color.GREEN);
         g.fillRect(barX, barY, (int) (barWidth * hpPercent), barHeight);
 
-        // Draw XP bar
+        // Draw XP bar (using persistent player level from save)
         int xpBarY = barY + barHeight + 15;
-        double xpPercent = player.getCurrentXP() / player.getMaxXP();
+        int playerLevel = player.getPlayerLevel();
+        int playerXP = player.getPlayerXP();
+        int xpNeeded = playerLevel * 100;
+        double xpPercent = (double) playerXP / xpNeeded;
         g.setColor(Color.GRAY);
         g.fillRect(barX, xpBarY, barWidth, barHeight);
         g.setColor(Color.YELLOW);
         g.fillRect(barX, xpBarY, (int) (barWidth * xpPercent), barHeight);
         g.setColor(Color.WHITE);
         g.setFont(new Font("Arial", Font.PLAIN, 12));
-        g.drawString("Level " + player.getLevel() + " (" + (int) player.getCurrentXP() + " / " + (int) player.getMaxXP() + ")", barX, xpBarY - 2);
+        g.drawString("Level " + playerLevel + " (" + playerXP + " / " + xpNeeded + " XP)", barX, xpBarY - 2);
 
         // Display weapon name below HP
         if (player.getHeldWeapon() != null) {

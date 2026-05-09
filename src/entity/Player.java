@@ -54,6 +54,10 @@ public class Player extends Entity {
     private Map<Consumable.ConsumableEffectType, ActiveConsumableEffect> activeEffects = new HashMap<>();
     private CurrencyManager currencyManager = new CurrencyManager();
 
+    // Persistent player stats (loaded from save)
+    private int playerLevel = 1;
+    private int playerXP = 0;
+
     public Player(int x, int y) {
         super(x, y);
         gameStartTime = System.currentTimeMillis();
@@ -63,16 +67,22 @@ public class Player extends Entity {
 
     // player spawn
     public void playerSpawn() {
-        // health
-        hp = 200;
-        maxHp = 200;
-        baseHp = 200;
-        baseMaxHp = 200;
+        // Load persistent stats from save data
+        loadPersistentStats();
+
+        // Calculate base stats from player level
+        // Level 1: 200 HP, 7.0 speed, 1.0 damage
+        // Each level adds: +20 HP, +0.2 speed, +0.05 damage
+        int levelBonus = playerLevel - 1;
+        baseHp = 200 + (levelBonus * 20);
+        baseMaxHp = baseHp;
+        hp = baseHp;
+        maxHp = (int) baseMaxHp;
+        baseSpeed = 7.0 + (levelBonus * 0.2);
+        speed = baseSpeed;
+        damage = 1.0 + (levelBonus * 0.05);
         dead = false;
-        // multipliers
-        damage = 1.0;
-        speed = 7.0;
-        baseSpeed = 7.0;
+
         // combat
         ranged = true;
         // visuals
@@ -100,6 +110,20 @@ public class Player extends Entity {
         // Set player reference in inventory for charm effects
         inventory.setPlayer(this);
 
+        System.out.println("Player spawned - Level: " + playerLevel + ", HP: " + (int)baseHp + ", Speed: " + String.format("%.1f", baseSpeed));
+    }
+
+    // Load persistent stats from save data
+    private void loadPersistentStats() {
+        save.SaveData saveData = save.SaveManager.load();
+        if (saveData != null) {
+            playerLevel = saveData.getPlayerLevel();
+            playerXP = saveData.getPlayerXP();
+            System.out.println("Loaded player stats - Level: " + playerLevel + ", XP: " + playerXP);
+        } else {
+            playerLevel = 1;
+            playerXP = 0;
+        }
     }
 
     // Apply starting loadout from LoadoutScreen
@@ -633,5 +657,13 @@ public class Player extends Entity {
 
     public CurrencyManager getCurrencyManager() {
         return currencyManager;
+    }
+
+    public int getPlayerLevel() {
+        return playerLevel;
+    }
+
+    public int getPlayerXP() {
+        return playerXP;
     }
 }

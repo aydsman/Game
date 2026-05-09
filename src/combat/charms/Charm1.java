@@ -9,6 +9,7 @@ public class Charm1 extends Charm {
         super(tier);
         name = "Simple Health Charm";
         description = "A basic charm that adds +10% to your health.";
+        iconPath = "assets/items/charms/health/simple_health_charm.png";
         applyTierMultipliers();
     }
 
