@@ -7,7 +7,8 @@ public class Summon2 extends Summon {
 
     public Summon2(int tier) {
         super(tier);
-        name = "Summon2";
+        name = "Lil Volcano";
+        description = "A little volcano that shoots enemies with lava.";
         applyTierMultipliers();
     }
 
@@ -15,4 +16,3 @@ public class Summon2 extends Summon {
         // Add tier-specific effects here later
     }
 }
-

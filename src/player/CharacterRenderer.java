@@ -17,9 +17,9 @@ public class CharacterRenderer {
         cachedAssets.clear();
         try {
             // Load test character asset
-            BufferedImage original = ImageIO.read(new File("assets/player/body/man/idle/idlemantest.png"));
+            BufferedImage original = ImageIO.read(new File("assets/player/body/man/idle/idle_front.png"));
             // Recolor based on skin color
-            Color[] from = {new Color(0xDD, 0xDD, 0xDD), new Color(0xAA, 0xAA, 0xAA), new Color(0x77, 0x77, 0x77)};
+            Color[] from = {new Color(0xBB, 0xBB, 0xBB), new Color(0xAA, 0xAA, 0xAA), new Color(0x77, 0x77, 0x77)};
             Color baseColor = skinColors[appearance.getSkinColorIndex() / 3][1]; // Base shade
             Color[] toColors = {baseColor.brighter(), baseColor, baseColor.darker()};
             BufferedImage recolored = recolor(original, from, toColors);
@@ -33,14 +33,26 @@ public class CharacterRenderer {
         BufferedImage result = new BufferedImage(src.getWidth(), src.getHeight(), src.getType());
         for (int x = 0; x < src.getWidth(); x++) {
             for (int y = 0; y < src.getHeight(); y++) {
-                Color pixel = new Color(src.getRGB(x, y), true);
+                int rgb = src.getRGB(x, y);
+                Color pixel = new Color(rgb, true);
+                boolean matched = false;
                 for (int i = 0; i < from.length; i++) {
-                    if (pixel.equals(from[i])) {
-                        result.setRGB(x, y, to[i].getRGB());
+                    if (pixel.getRed() == from[i].getRed() &&
+                            pixel.getGreen() == from[i].getGreen() &&
+                            pixel.getBlue() == from[i].getBlue()) {
+                        // Preserve original alpha
+                        Color replacement = to[i];
+                        int newRgb = (pixel.getAlpha() << 24) |
+                                (replacement.getRed() << 16) |
+                                (replacement.getGreen() << 8) |
+                                replacement.getBlue();
+                        result.setRGB(x, y, newRgb);
+                        matched = true;
                         break;
-                    } else {
-                        result.setRGB(x, y, pixel.getRGB());
                     }
+                }
+                if (!matched) {
+                    result.setRGB(x, y, rgb); // keep original pixel
                 }
             }
         }

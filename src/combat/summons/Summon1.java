@@ -7,7 +7,8 @@ public class Summon1 extends Summon {
 
     public Summon1(int tier) {
         super(tier);
-        name = "Summon1";
+        name = "Slime";
+        description = "A small slime that shoots slime pellets at enemies";
         applyTierMultipliers();
     }
 
@@ -15,3 +16,4 @@ public class Summon1 extends Summon {
         // Add tier-specific effects here later
     }
 }
+

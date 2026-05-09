@@ -91,6 +91,10 @@ public class ItemRegistry {
         charms.add(new SpeedCharm2()); // Speed Charm - Tier 2
         charms.add(new SpeedCharm3()); // Advanced Speed Charm - Tier 3
         summons.add(new Summon1()); // Tier 1
+        summons.add(new combat.summons.Summon2()); // Tier 2
+        summons.add(new combat.summons.Summon3()); // Tier 3
+        summons.add(new combat.summons.Summon4()); // Tier 4
+        summons.add(new combat.summons.Summon5()); // Tier 5
 
         // Powers sorted by name, then by tier
         powers.add(new Earth()); // Tier 1

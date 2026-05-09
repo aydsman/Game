@@ -13,6 +13,7 @@ import ui.screens.LoadoutScreen;
 import ui.screens.ShopScreen;
 import ui.screens.LootboxTestScreen;
 import world.dungeon.DungeonArenaScreen;
+import player.Wardrobe;
 import util.KeyHandler;
 import util.MouseHandler;
 import currency.CurrencyManager;
@@ -70,6 +71,7 @@ public class GamePanel extends JPanel implements Runnable {
 
     // Currency manager (persists across sessions for Cash and Gems)
     private CurrencyManager currencyManager;
+    private Wardrobe wardrobe;
     private AutoSave autoSave;
 
     Thread gameThread;
@@ -78,6 +80,10 @@ public class GamePanel extends JPanel implements Runnable {
         // Load saved data first
         SaveData saveData = SaveManager.load();
         currencyManager = new CurrencyManager(0, saveData.getCash(), saveData.getGems());
+        wardrobe = new Wardrobe(saveData.getUnlockedClothingIds());
+        if (wardrobe.getUnlockedClothingIds().isEmpty()) {
+            wardrobe.unlockDefaults();
+        }
         
         menuScreen = new MenuScreen(this);
         gameScreen = new GameScreen(this);
@@ -243,6 +249,20 @@ public class GamePanel extends JPanel implements Runnable {
         if (showGame) gameScreen.update(keyHandler, mouseHandler, SCREEN_WIDTH, SCREEN_HEIGHT);
         if (showHub) hubScreen.update(keyHandler, mouseHandler, SCREEN_WIDTH, SCREEN_HEIGHT);
         if (showDungeonArena) dungeonArenaScreen.update(keyHandler, mouseHandler, SCREEN_WIDTH, SCREEN_HEIGHT);
+        
+        // Customize screen input handling
+        if (showCustomize) {
+            customizeScreen.handleMouseMove(mouseHandler.mouseX, mouseHandler.mouseY);
+            if (keyHandler.ePressed) {
+                customizeScreen.handleKeyPress(java.awt.event.KeyEvent.VK_E);
+                keyHandler.ePressed = false;
+            }
+            if (keyHandler.uPressed) {
+                customizeScreen.handleKeyPress(java.awt.event.KeyEvent.VK_U);
+                keyHandler.uPressed = false;
+            }
+        }
+        
         if (showLoadout) {
             if (keyHandler.uPressed) {
                 loadoutScreen.toggleDebugPanel();
@@ -305,6 +325,8 @@ public class GamePanel extends JPanel implements Runnable {
     public CurrencyManager getCurrencyManager() {
         return currencyManager;
     }
+
+    public Wardrobe getWardrobe() { return wardrobe; }
 
     public void resetCurrencyManager() {
         SaveData data = SaveManager.load();

@@ -2,6 +2,9 @@ package player;
 
 import combat.clothing.ClothingItem;
 import combat.clothing.ClothingType;
+import combat.clothing.tops.*;
+import combat.clothing.bottoms.*;
+import combat.clothing.accessories.*;
 import java.util.*;
 
 public class Wardrobe {
@@ -25,14 +28,48 @@ public class Wardrobe {
     }
 
     public List<ClothingItem> getUnlockedByType(ClothingType type) {
-        List<ClothingItem> items = new ArrayList<>();
-        if (type == ClothingType.TOP && isUnlocked("tshirt")) {
-            items.add(new ClothingItem("TShirt", ClothingType.TOP, "assets/player/shared/tops/tshirt.png", java.awt.Color.WHITE, true));
+        List<ClothingItem> all = getAllClothingItems();
+        List<ClothingItem> result = new ArrayList<>();
+        for (ClothingItem item : all) {
+            if (item.getType() == type && isUnlocked(item.getName().toLowerCase())) {
+                result.add(item);
+            }
         }
-        if (type == ClothingType.BOTTOM && isUnlocked("basicpants")) {
-            items.add(new ClothingItem("BasicPants", ClothingType.BOTTOM, "assets/player/shared/bottoms/basicpants.png", java.awt.Color.BLUE, true));
-        }
-        return items;
+        return result;
+    }
+
+    private List<ClothingItem> getAllClothingItems() {
+        List<ClothingItem> all = new ArrayList<>();
+
+        // Tops
+        all.add(new TShirt());
+        all.add(new BoxyTee());
+        all.add(new Hoodie());
+        all.add(new LongSleeve());
+        all.add(new TankTop());
+        all.add(new SuitTop());
+
+        // Bottoms
+        all.add(new BasicPants());
+        all.add(new Shorts());
+        all.add(new Jorts());
+        all.add(new BaggyJeans());
+        all.add(new Sweatpants());
+        all.add(new SwimShorts());
+        all.add(new SuitBottom());
+
+        // Accessories
+        all.add(new Crown());
+        all.add(new Cape());
+        all.add(new Fedora());
+        all.add(new AllSeeingEye());
+        all.add(new Headband());
+        all.add(new NinjaHeadband());
+        all.add(new Glasses());
+        all.add(new Shades());
+        all.add(new Aviators());
+
+        return all;
     }
 
     public Set<String> getUnlockedClothingIds() {
@@ -41,6 +78,6 @@ public class Wardrobe {
 
     public void unlockDefaults() {
         unlock("tshirt");
-        unlock("basicpants");
+        unlock("shorts");
     }
 }

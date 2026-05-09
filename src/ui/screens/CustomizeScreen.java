@@ -1,6 +1,7 @@
 package ui.screens;
 
 import ui.GamePanel;
+import java.util.ArrayList;
 import player.CharacterAppearance;
 import player.CharacterRenderer;
 import player.Wardrobe;
@@ -13,6 +14,8 @@ import java.awt.image.BufferedImage;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Set;
+import java.util.HashSet;
 
 public class CustomizeScreen {
 
@@ -25,6 +28,12 @@ public class CustomizeScreen {
     private boolean clothingSelectionMode = false;
     private ClothingType selectedClothingType = null;
     private Rectangle clothingSelectionArea = new Rectangle(50, 150, 700, 600);
+
+    // Style selection overlay state
+    private boolean styleSelectionMode = false;
+    private ClothingItem selectedClothingForStyling = null;
+    private Rectangle styleSelectionArea = new Rectangle(150, 200, 600, 500);
+    private Rectangle styleCloseBtn = new Rectangle(styleSelectionArea.x + styleSelectionArea.width - 60, styleSelectionArea.y + 10, 50, 30);
 
     private Map<String, BufferedImage> iconCache = new HashMap<>();
 
@@ -91,13 +100,40 @@ public class CustomizeScreen {
         SaveData data = SaveManager.load();
         this.tempAppearance = data.getAppearance() != null ? data.getAppearance() : new CharacterAppearance();
         selectedSkinColor = tempAppearance.getSkinColorIndex();
-        this.wardrobe = new Wardrobe(data.getUnlockedClothingIds());
-        if (wardrobe.getUnlockedClothingIds().isEmpty()) {
-            wardrobe.unlockDefaults();
+        this.wardrobe = gamePanel.getWardrobe();
+    }
+
+    public void handleMouseMove(int x, int y) {
+        if (styleSelectionMode) {
+            // Don't update main buttons when style selector is open
+            return;
         }
+        if (accessoriesBtn.contains(x, y)) hoveredButton = "accessories";
+        else if (topsBtn.contains(x, y)) hoveredButton = "tops";
+        else if (bottomsBtn.contains(x, y)) hoveredButton = "bottoms";
+        else if (customizeBodyBtn.contains(x, y)) hoveredButton = "body";
+        else if (confirmBtn.contains(x, y)) hoveredButton = "confirm";
+        else if (backBtn.contains(x, y)) hoveredButton = "back";
+        else if (bodyTypeBtn.contains(x, y)) hoveredButton = "bodytype";
+        else if (bodyBackBtn.contains(x, y)) hoveredButton = "bodyBack";
+        else hoveredButton = null;
     }
 
     public void handleClick(int x, int y) {
+        if (styleSelectionMode) {
+            // Handle style selection clicks
+            if (styleCloseBtn.contains(x, y)) {
+                closeStyleSelector();
+                return;
+            } else if (styleSelectionArea.contains(x, y)) {
+                handleStyleSelectionClick(x, y);
+            } else {
+                // Click outside, close style selection
+                closeStyleSelector();
+            }
+            return;
+        }
+        
         if (clothingSelectionMode) {
             // Handle clothing selection clicks
             if (clothingSelectionArea.contains(x, y)) {
@@ -244,6 +280,8 @@ public class CustomizeScreen {
             if (clothingSelectionMode) {
                 drawClothingSelection(g);
             }
+            // Draw style selection overlay if active
+            drawStyleSelection(g);
         } else {
             drawBodyScreen(g);
         }
@@ -463,125 +501,236 @@ public class CustomizeScreen {
         g.setStroke(new BasicStroke(1));
     }
 
-     private void handleClothingSelectionClick(int x, int y) {
-         List<ClothingItem> items = wardrobe.getUnlockedByType(selectedClothingType);
+    private void handleClothingSelectionClick(int x, int y) {
+        List<ClothingItem> allItems = wardrobe.getUnlockedByType(selectedClothingType);
 
-         // Safety check for empty wardrobe
-         if (items.isEmpty()) {
-             return;
-         }
+        int startX = clothingSelectionArea.x + 30;
+        int startY = clothingSelectionArea.y + 90;
+        int slotSize = 70;
+        int spacing = 12;
+        int itemsPerRow = 8;
+        int currentY = startY;
 
-         int cols = 4; // Match the drawClothingSelection cols
-         int rows = (int) Math.ceil(items.size() / (double) cols);
-         int itemWidth = clothingSelectionArea.width / cols;
-         int itemHeight = clothingSelectionArea.height / rows;
-         int padding = 15;
-         int cardSize = 100; // Match the drawClothingSelection cardSize
+        for (int tier = 1; tier <= 5; tier++) {
+            List<ClothingItem> itemsInTier = new ArrayList<>();
 
-        for (int i = 0; i < items.size(); i++) {
-            int itemX = clothingSelectionArea.x + (i % cols) * itemWidth + padding;
-            int itemY = clothingSelectionArea.y + (i / cols) * itemHeight + padding + 60;
-
-            if (x >= itemX && x <= itemX + cardSize && y >= itemY && y <= itemY + cardSize) {
-                ClothingItem selectedItem = items.get(i);
-                switch (selectedClothingType) {
-                    case TOP -> tempAppearance.setEquippedTopId(selectedItem.getName().toLowerCase());
-                    case BOTTOM -> tempAppearance.setEquippedBottomId(selectedItem.getName().toLowerCase());
-                    case ACCESSORY -> tempAppearance.setEquippedAccessoryId(selectedItem.getName().toLowerCase());
-                }
-                // Don't close selection mode - allow user to try different items
-                return;
+            if (tier == 1 && selectedClothingType == ClothingType.ACCESSORY) {
+                itemsInTier.add(null); // None option
             }
+
+            for (ClothingItem item : allItems) {
+                if (item.getTier() == tier) {
+                    itemsInTier.add(item);
+                }
+            }
+
+            if (itemsInTier.isEmpty()) continue;
+
+            currentY += 30; // skip tier label
+
+            int rows = (itemsInTier.size() + itemsPerRow - 1) / itemsPerRow;
+
+            for (int i = 0; i < itemsInTier.size(); i++) {
+                int col = i % itemsPerRow;
+                int row = i / itemsPerRow;
+                int itemX = startX + col * (slotSize + spacing);
+                int itemY = currentY + row * (slotSize + spacing);
+
+                if (x >= itemX && x <= itemX + slotSize && y >= itemY && y <= itemY + slotSize) {
+                    ClothingItem selected = itemsInTier.get(i);
+                    if (selected != null) {
+                        // Auto-equip style if clothing has only one available style
+                        List<String> styles = selected.getStyleOptions();
+                        if (styles.size() == 1) {
+                            selected.setSelectedStyle(styles.get(0));
+                            SaveData data = SaveManager.load();
+                            data.getEquippedClothingStyles().put(selected.getName(), styles.get(0));
+                            SaveManager.save(data);
+                        }
+                    }
+                    switch (selectedClothingType) {
+                        case TOP -> tempAppearance.setEquippedTopId(selected == null ? null : selected.getName().toLowerCase());
+                        case BOTTOM -> tempAppearance.setEquippedBottomId(selected == null ? null : selected.getName().toLowerCase());
+                        case ACCESSORY -> tempAppearance.setEquippedAccessoryId(selected == null ? null : selected.getName().toLowerCase());
+                    }
+                    return;
+                }
+            }
+
+            currentY += rows * (slotSize + spacing) + 20;
         }
     }
 
-     private void drawClothingSelection(Graphics2D g) {
-         if (selectedClothingType == null) return;
+    private void drawClothingSelection(Graphics2D g) {
+        if (selectedClothingType == null) return;
 
-         // Modern modal background with blur effect
-         g.setColor(new Color(0, 0, 0, 200));
-         g.fill(clothingSelectionArea);
+        int pickerX = clothingSelectionArea.x;
+        int pickerY = clothingSelectionArea.y;
+        int pickerW = clothingSelectionArea.width;
+        int pickerH = clothingSelectionArea.height;
 
-         // Gradient border
-         GradientPaint borderGradient = new GradientPaint(
-             clothingSelectionArea.x, clothingSelectionArea.y, new Color(100, 200, 255),
-             clothingSelectionArea.x + clothingSelectionArea.width, clothingSelectionArea.y + clothingSelectionArea.height, new Color(147, 112, 219)
-         );
-         g.setPaint(borderGradient);
-         g.setStroke(new BasicStroke(3));
-         g.drawRoundRect(clothingSelectionArea.x, clothingSelectionArea.y, clothingSelectionArea.width, clothingSelectionArea.height, 16, 16);
-         g.setStroke(new BasicStroke(1));
-         g.setPaint(null);
+        // Background
+        g.setColor(new Color(0, 0, 0, 200));
+        g.fillRoundRect(pickerX, pickerY, pickerW, pickerH, 16, 16);
 
-         // Title with styling
-         g.setColor(new Color(100, 200, 255));
-         g.setFont(new Font("Segoe UI", Font.BOLD, 28));
-         g.drawString("Select " + selectedClothingType.toString().toLowerCase(), clothingSelectionArea.x + 30, clothingSelectionArea.y + 40);
+        // Gradient border
+        GradientPaint borderGradient = new GradientPaint(
+                pickerX, pickerY, new Color(100, 200, 255),
+                pickerX + pickerW, pickerY + pickerH, new Color(147, 112, 219)
+        );
+        g.setPaint(borderGradient);
+        g.setStroke(new BasicStroke(3));
+        g.drawRoundRect(pickerX, pickerY, pickerW, pickerH, 16, 16);
+        g.setStroke(new BasicStroke(1));
+        g.setPaint(null);
 
-         // Subtitle
-         g.setColor(new Color(150, 150, 170));
-         g.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-         g.drawString("Click an item to equip it", clothingSelectionArea.x + 30, clothingSelectionArea.y + 65);
+        // Title
+        g.setColor(new Color(100, 200, 255));
+        g.setFont(new Font("Segoe UI", Font.BOLD, 28));
+        String title = "Select " + selectedClothingType.toString().charAt(0)
+                + selectedClothingType.toString().substring(1).toLowerCase();
+        g.drawString(title, pickerX + 30, pickerY + 40);
 
-         List<ClothingItem> items = wardrobe.getUnlockedByType(selectedClothingType);
+        g.setColor(new Color(150, 150, 170));
+        g.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        g.drawString("Click an item to equip it", pickerX + 30, pickerY + 65);
 
-         // Handle empty wardrobe with modern styling
-         if (items.isEmpty()) {
-             g.setColor(new Color(150, 150, 170));
-             g.setFont(new Font("Segoe UI", Font.PLAIN, 18));
-             g.drawString("No items unlocked yet!", clothingSelectionArea.x + 30, clothingSelectionArea.y + 120);
-             g.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-             g.drawString("Play the game to unlock more clothing", clothingSelectionArea.x + 30, clothingSelectionArea.y + 145);
-             return;
-         }
+        List<ClothingItem> allItems = wardrobe.getUnlockedByType(selectedClothingType);
 
-         int cols = 4; // More columns for smaller icons
-         int rows = (int) Math.ceil(items.size() / (double) cols);
-         int itemWidth = clothingSelectionArea.width / cols;
-         int itemHeight = clothingSelectionArea.height / rows;
-         int padding = 15;
-         int cardSize = 100; // Fixed smaller square size
+        if (allItems.isEmpty() && selectedClothingType != ClothingType.ACCESSORY) {
+            g.setColor(new Color(150, 150, 170));
+            g.setFont(new Font("Segoe UI", Font.PLAIN, 18));
+            g.drawString("No items unlocked yet!", pickerX + 30, pickerY + 120);
+            g.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+            g.drawString("Play the game to unlock more clothing", pickerX + 30, pickerY + 145);
+            return;
+        }
 
-        for (int i = 0; i < items.size(); i++) {
-            ClothingItem item = items.get(i);
-            int itemX = clothingSelectionArea.x + (i % cols) * itemWidth + padding;
-            int itemY = clothingSelectionArea.y + (i / cols) * itemHeight + padding + 60;
-            int cardWidth = cardSize;
-            int cardHeight = cardSize;
+        int startX = pickerX + 30;
+        int startY = pickerY + 90;
+        int slotSize = 70;
+        int spacing = 12;
+        int itemsPerRow = 8;
+        int currentY = startY;
 
-            // Draw item card
-            g.setColor(new Color(50, 50, 60));
-            g.fillRoundRect(itemX, itemY, cardWidth, cardHeight, 12, 12);
-            g.setColor(new Color(80, 80, 90));
-            g.drawRoundRect(itemX, itemY, cardWidth, cardHeight, 12, 12);
+        // Group items by tier
+        for (int tier = 1; tier <= 5; tier++) {
+            List<ClothingItem> itemsInTier = new ArrayList<>();
 
-            // Draw item icon or name
-            BufferedImage icon = iconCache.get(item.getName());
-            if (icon == null) {
-                try {
-                    icon = javax.imageio.ImageIO.read(new java.io.File(item.getAssetPath()));
-                    iconCache.put(item.getName(), icon);
-                } catch (Exception e) {
-                    icon = null;
+            // Add None option for accessories only, at tier 1
+            if (tier == 1 && selectedClothingType == ClothingType.ACCESSORY) {
+                itemsInTier.add(null); // null = None
+            }
+
+            for (ClothingItem item : allItems) {
+                if (item.getTier() == tier) {
+                    itemsInTier.add(item);
                 }
             }
-            if (icon != null) {
-                // Draw icon with shadow
-                g.setColor(new Color(0, 0, 0, 30));
-                g.fillRect(itemX + 20, itemY + 20, cardWidth - 40, cardHeight - 60);
-                g.drawImage(icon, itemX + 20, itemY + 20, cardWidth - 40, cardHeight - 60, null);
-            } else {
-                // Fallback colored rectangle
-                g.setColor(new Color(60, 60, 70));
-                g.fillRect(itemX + 20, itemY + 20, cardWidth - 40, cardHeight - 60);
+
+            if (itemsInTier.isEmpty()) continue;
+
+            // Tier label
+            Color tierColor = switch (tier) {
+                case 1 -> new Color(200, 200, 200);
+                case 2 -> new Color(100, 200, 100);
+                case 3 -> new Color(100, 150, 255);
+                case 4 -> new Color(200, 100, 255);
+                case 5 -> new Color(255, 215, 0);
+                default -> Color.WHITE;
+            };
+            g.setColor(tierColor);
+            g.setFont(new Font("Segoe UI", Font.BOLD, 20));
+            g.drawString("Tier " + tier, startX, currentY);
+            currentY += 30;
+
+            for (int i = 0; i < itemsInTier.size(); i++) {
+                ClothingItem item = itemsInTier.get(i);
+                int col = i % itemsPerRow;
+                int row = i / itemsPerRow;
+                int itemX = startX + col * (slotSize + spacing);
+                int itemY = currentY + row * (slotSize + spacing);
+
+                // Check if selected
+                String equippedId = switch (selectedClothingType) {
+                    case TOP -> tempAppearance.getEquippedTopId();
+                    case BOTTOM -> tempAppearance.getEquippedBottomId();
+                    case ACCESSORY -> tempAppearance.getEquippedAccessoryId();
+                    default -> null;
+                };
+                boolean isNone = item == null;
+                boolean isSelected = isNone
+                        ? (equippedId == null || equippedId.isEmpty())
+                        : (item.getName().equalsIgnoreCase(equippedId));
+
+                // Slot background
+                if (isSelected) {
+                    GradientPaint grad = new GradientPaint(itemX, itemY, new Color(100, 150, 200), itemX, itemY + slotSize, new Color(50, 100, 150));
+                    g.setPaint(grad);
+                } else {
+                    GradientPaint grad = new GradientPaint(itemX, itemY, new Color(50, 50, 60), itemX, itemY + slotSize, new Color(40, 40, 50));
+                    g.setPaint(grad);
+                }
+                g.fillRoundRect(itemX, itemY, slotSize, slotSize, 8, 8);
+                g.setPaint(null);
+
+                // Border
+                g.setColor(isSelected ? new Color(100, 200, 255) : new Color(70, 70, 80));
+                g.setStroke(new BasicStroke(2));
+                g.drawRoundRect(itemX, itemY, slotSize, slotSize, 8, 8);
+                g.setStroke(new BasicStroke(1));
+
+                if (isNone) {
+                    // Draw X for None
+                    g.setColor(new Color(150, 150, 150));
+                    g.setStroke(new BasicStroke(2));
+                    g.drawLine(itemX + 15, itemY + 15, itemX + slotSize - 15, itemY + slotSize - 15);
+                    g.drawLine(itemX + slotSize - 15, itemY + 15, itemX + 15, itemY + slotSize - 15);
+                    g.setStroke(new BasicStroke(1));
+                } else {
+                    // Load icon from assetPath
+                    BufferedImage icon = iconCache.get(item.getName());
+                    if (icon == null) {
+                        try {
+                            icon = javax.imageio.ImageIO.read(new java.io.File(item.getAssetPath()));
+                            iconCache.put(item.getName(), icon);
+                        } catch (Exception e) {
+                            icon = null;
+                        }
+                    }
+
+                    if (icon != null) {
+                        int maxW = slotSize - 4;
+                        int maxH = slotSize - 14;
+                        double scale = Math.min((double) maxW / icon.getWidth(), (double) maxH / icon.getHeight());
+                        int drawW = (int) (icon.getWidth() * scale);
+                        int drawH = (int) (icon.getHeight() * scale);
+                        int drawX = itemX + (slotSize - drawW) / 2;
+                        int drawY = itemY + (slotSize - 14 - drawH) / 2;
+                        g.drawImage(icon, drawX, drawY, drawW, drawH, null);
+                    } else {
+                        // Fallback colored square
+                        Color fallback = switch (selectedClothingType) {
+                            case TOP -> new Color(52, 152, 219);
+                            case BOTTOM -> new Color(46, 204, 113);
+                            case ACCESSORY -> new Color(147, 112, 219);
+                            default -> new Color(100, 100, 100);
+                        };
+                        g.setColor(fallback);
+                        g.fillRoundRect(itemX + 10, itemY + 10, slotSize - 20, slotSize - 20, 4, 4);
+                    }
+
+                    // Item name
+                    g.setColor(Color.WHITE);
+                    g.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+                    String name = item.getName();
+                    if (name.length() > 8) name = name.substring(0, 8) + ".";
+                    g.drawString(name, itemX + 2, itemY + slotSize - 2);
+                }
             }
 
-            // Item name
-            g.setColor(Color.WHITE);
-            g.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-            String name = item.getName();
-            if (name.length() > 12) name = name.substring(0, 12) + "...";
-            g.drawString(name, itemX + cardWidth / 2 - g.getFontMetrics().stringWidth(name) / 2, itemY + cardHeight - 15);
+            int rows = (itemsInTier.size() + itemsPerRow - 1) / itemsPerRow;
+            currentY += rows * (slotSize + spacing) + 20;
         }
     }
 
@@ -623,5 +772,286 @@ public class CustomizeScreen {
         g.setColor(new Color(150, 150, 170));
         g.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         g.drawString(selected, rect.x + 15, rect.y + rect.height / 2);
+    }
+
+    /**
+     * Handle keyboard input - E key to open style selector while in clothing selection mode
+     */
+    public void handleKeyPress(int keyCode) {
+        // U key for debug output
+        if (keyCode == java.awt.event.KeyEvent.VK_U) {
+            printEquippedDebug();
+            return;
+        }
+
+        if (keyCode == java.awt.event.KeyEvent.VK_E && clothingSelectionMode && !styleSelectionMode && selectedClothingForStyling == null) {
+            // E key pressed while in clothing selection mode
+            // Open style selector for the currently equipped clothing of this type
+            if (selectedClothingType != null) {
+                String equippedId = switch (selectedClothingType) {
+                    case TOP -> tempAppearance.getEquippedTopId();
+                    case BOTTOM -> tempAppearance.getEquippedBottomId();
+                    case ACCESSORY -> tempAppearance.getEquippedAccessoryId();
+                    default -> null;
+                };
+                
+                if (equippedId != null && !equippedId.isEmpty()) {
+                    // Find the clothing item by name
+                    List<ClothingItem> allItems = wardrobe.getUnlockedByType(selectedClothingType);
+                    for (ClothingItem item : allItems) {
+                        if (item.getName().equalsIgnoreCase(equippedId)) {
+                            openStyleSelector(item);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Open style selection overlay for a specific clothing item
+     */
+    public void openStyleSelector(ClothingItem clothing) {
+        if (clothing == null || !(clothing instanceof combat.clothing.ClothingItem)) {
+            return;
+        }
+        selectedClothingForStyling = clothing;
+
+        // Load the equipped style from SaveData so the UI shows correct selection
+        SaveData saveData = SaveManager.load();
+        String equippedStyle = saveData.getEquippedClothingStyles().get(clothing.getName());
+        if (equippedStyle != null) {
+            selectedClothingForStyling.setSelectedStyle(equippedStyle);
+        }
+
+        styleSelectionMode = true;
+    }
+
+    /**
+     * Close style selection overlay
+     */
+    public void closeStyleSelector() {
+        styleSelectionMode = false;
+        selectedClothingForStyling = null;
+    }
+
+    /**
+     * Print debug info about equipped clothing and styles
+     */
+    private void printEquippedDebug() {
+        System.out.println("=== EQUIPPED CLOTHING DEBUG ===");
+        SaveData data = SaveManager.load();
+        Map<String, String> equippedStyles = data.getEquippedClothingStyles();
+
+        // Get equipped items and capitalize first letter to match clothing names
+        String topId = tempAppearance.getEquippedTopId();
+        if (topId != null && !topId.isEmpty()) {
+            String clothingName = capitalizeFirst(topId);
+            String style = equippedStyles.getOrDefault(clothingName, "default");
+            System.out.println("Top: " + clothingName + " (Style: " + style + ")");
+        } else {
+            System.out.println("Top: None");
+        }
+
+        String bottomId = tempAppearance.getEquippedBottomId();
+        if (bottomId != null && !bottomId.isEmpty()) {
+            String clothingName = capitalizeFirst(bottomId);
+            String style = equippedStyles.getOrDefault(clothingName, "default");
+            System.out.println("Bottom: " + clothingName + " (Style: " + style + ")");
+        } else {
+            System.out.println("Bottom: None");
+        }
+
+        String accessoryId = tempAppearance.getEquippedAccessoryId();
+        if (accessoryId != null && !accessoryId.isEmpty()) {
+            String clothingName = capitalizeFirst(accessoryId);
+            String style = equippedStyles.getOrDefault(clothingName, "default");
+            System.out.println("Accessory: " + clothingName + " (Style: " + style + ")");
+        } else {
+            System.out.println("Accessory: None");
+        }
+        System.out.println("===============================");
+    }
+
+    private String capitalizeFirst(String str) {
+        if (str == null || str.isEmpty()) return str;
+        return Character.toUpperCase(str.charAt(0)) + str.substring(1);
+    }
+
+    /**
+     * Handle style selection clicks
+     */
+    private void handleStyleSelectionClick(int x, int y) {
+        if (selectedClothingForStyling == null) {
+            closeStyleSelector();
+            return;
+        }
+
+        SaveData saveData = SaveManager.load();
+        List<String> styles = selectedClothingForStyling.getStyleOptions();
+        Set<String> unlockedStyles = saveData.getUnlockedClothingStyles().getOrDefault(selectedClothingForStyling.getName(), new HashSet<>());
+        String defaultStyle = selectedClothingForStyling.getDefaultStyle();
+
+        // Create combined list with default style first (if it exists)
+        List<String> allStyles = new ArrayList<>();
+        if (defaultStyle != null) {
+            allStyles.add(defaultStyle);
+        }
+        allStyles.addAll(styles);
+
+        int startX = styleSelectionArea.x + 30;
+        int startY = styleSelectionArea.y + 90;
+        int slotSize = 70;
+        int spacing = 12;
+        int stylesPerRow = 6;
+
+        for (int i = 0; i < allStyles.size(); i++) {
+            String style = allStyles.get(i);
+            int col = i % stylesPerRow;
+            int row = i / stylesPerRow;
+            int styleX = startX + col * (slotSize + spacing);
+            int styleY = startY + row * (slotSize + spacing);
+
+            if (x >= styleX && x <= styleX + slotSize && y >= styleY && y <= styleY + slotSize) {
+                // Clicked on this style
+                boolean isDefault = style.equals(defaultStyle);
+                boolean isUnlocked = isDefault || unlockedStyles.contains(style);
+
+                System.out.println("Clicked style: " + style + " | isDefault: " + isDefault + " | isUnlocked: " + isUnlocked + " | unlockedStyles: " + unlockedStyles);
+
+                if (isUnlocked) {
+                    // Style is unlocked (or is default), equip it
+                    selectedClothingForStyling.setSelectedStyle(style);
+
+                    // Save the equipped style
+                    Map<String, String> equippedStyles = saveData.getEquippedClothingStyles();
+                    equippedStyles.put(selectedClothingForStyling.getName(), style);
+                    SaveManager.save(saveData);
+
+                    System.out.println("Selected style: " + style + " for " + selectedClothingForStyling.getName());
+                    // Do NOT close the style selector here; let the user close it explicitly
+                } else {
+                    System.out.println("Style " + style + " is locked!");
+                }
+                return;
+            }
+        }
+    }
+
+    /**
+     * Draw the style selection overlay
+     */
+    private void drawStyleSelection(Graphics2D g) {
+        if (selectedClothingForStyling == null || !styleSelectionMode) {
+            return;
+        }
+
+        SaveData saveData = SaveManager.load();
+        
+        int pickerX = styleSelectionArea.x;
+        int pickerY = styleSelectionArea.y;
+        int pickerW = styleSelectionArea.width;
+        int pickerH = styleSelectionArea.height;
+
+        // Background
+        g.setColor(new Color(0, 0, 0, 200));
+        g.fillRoundRect(pickerX, pickerY, pickerW, pickerH, 16, 16);
+
+        // Gradient border
+        GradientPaint borderGradient = new GradientPaint(
+                pickerX, pickerY, new Color(100, 200, 255),
+                pickerX + pickerW, pickerY + pickerH, new Color(147, 112, 219)
+        );
+        g.setPaint(borderGradient);
+        g.setStroke(new BasicStroke(3));
+        g.drawRoundRect(pickerX, pickerY, pickerW, pickerH, 16, 16);
+        g.setStroke(new BasicStroke(1));
+        g.setPaint(null);
+
+        // Title
+        g.setColor(new Color(100, 200, 255));
+        g.setFont(new Font("Segoe UI", Font.BOLD, 28));
+        g.drawString("Select Style", pickerX + 30, pickerY + 40);
+
+        g.setColor(new Color(150, 150, 170));
+        g.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        g.drawString("Locked styles cannot be selected yet", pickerX + 30, pickerY + 65);
+
+        List<String> styles = selectedClothingForStyling.getStyleOptions();
+        Set<String> unlockedStyles = saveData.getUnlockedClothingStyles().getOrDefault(selectedClothingForStyling.getName(), new HashSet<>());
+        String defaultStyle = selectedClothingForStyling.getDefaultStyle();
+
+        // Create combined list with default style first (if it exists)
+        List<String> allStyles = new ArrayList<>();
+        if (defaultStyle != null) {
+            allStyles.add(defaultStyle);
+        }
+        allStyles.addAll(styles);
+
+        int startX = pickerX + 30;
+        int startY = pickerY + 90;
+        int slotSize = 70;
+        int spacing = 12;
+        int stylesPerRow = 6;
+
+        for (int i = 0; i < allStyles.size(); i++) {
+            String style = allStyles.get(i);
+            int col = i % stylesPerRow;
+            int row = i / stylesPerRow;
+            int styleX = startX + col * (slotSize + spacing);
+            int styleY = startY + row * (slotSize + spacing);
+
+            boolean isDefault = style.equals(defaultStyle);
+            boolean isUnlocked = isDefault || unlockedStyles.contains(style);
+            boolean isSelected = style.equals(selectedClothingForStyling.getSelectedStyle());
+
+            // Slot background
+            if (isSelected && isUnlocked) {
+                GradientPaint grad = new GradientPaint(styleX, styleY, new Color(100, 150, 200), styleX, styleY + slotSize, new Color(50, 100, 150));
+                g.setPaint(grad);
+            } else {
+                GradientPaint grad = new GradientPaint(styleX, styleY, new Color(50, 50, 60), styleX, styleY + slotSize, new Color(40, 40, 50));
+                g.setPaint(grad);
+            }
+            g.fillRoundRect(styleX, styleY, slotSize, slotSize, 8, 8);
+            g.setPaint(null);
+
+            // Border
+            if (isDefault) {
+                // Green outline for default style
+                g.setColor(new Color(50, 200, 50));
+                g.setStroke(new BasicStroke(3));
+            } else if (isSelected && isUnlocked) {
+                g.setColor(new Color(100, 200, 255));
+                g.setStroke(new BasicStroke(3));
+            } else {
+                g.setColor(new Color(70, 70, 80));
+                g.setStroke(new BasicStroke(2));
+            }
+            g.drawRoundRect(styleX, styleY, slotSize, slotSize, 8, 8);
+            g.setStroke(new BasicStroke(1));
+
+            // Style name
+            g.setColor(isUnlocked ? Color.WHITE : new Color(100, 100, 100));
+            g.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+            g.drawString(style, styleX + 5, styleY + slotSize - 5);
+
+            // Lock icon if not unlocked
+            if (!isUnlocked) {
+                g.setColor(new Color(200, 100, 100, 150));
+                g.fillRoundRect(styleX + 20, styleY + 20, 30, 30, 4, 4);
+                g.setColor(new Color(255, 150, 150));
+                g.setFont(new Font("Segoe UI", Font.BOLD, 18));
+                g.drawString("L", styleX + 30, styleY + 42);
+            }
+        }
+
+        // Close button for style selector
+        g.setColor(new Color(255, 100, 100));
+        g.fillRoundRect(styleCloseBtn.x, styleCloseBtn.y, styleCloseBtn.width, styleCloseBtn.height, 12, 12);
+        g.setColor(Color.WHITE);
+        g.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        g.drawString("X", styleCloseBtn.x + 15, styleCloseBtn.y + 20);
     }
 }

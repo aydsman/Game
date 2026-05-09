@@ -1,9 +1,12 @@
 package ui.screens;
 
 import combat.Item;
+import combat.clothing.ClothingItem;
 import combat.lootboxes.ClothesLootbox1;
 import combat.lootboxes.LootBox;
 import combat.lootboxes.Lootbox1;
+import save.SaveData;
+import save.SaveManager;
 import ui.GamePanel;
 import java.awt.Color;
 import java.awt.Font;
@@ -75,7 +78,16 @@ public class LootboxTestScreen {
                 LootResult result = new LootResult(item);
                 results.add(result);
                 // Unlock the item in LoadoutScreen
-                gamePanel.getLoadoutScreen().unlockItem(result.type, result.itemName, result.tier);
+                if (result.type.equals("Clothing")) {
+                    gamePanel.getWardrobe().unlock(result.itemName);
+                    SaveData data = SaveManager.load();
+                    data.setUnlockedClothingIds(gamePanel.getWardrobe().getUnlockedClothingIds());
+                    SaveManager.save(data);
+                    String styleInfo = result.styleName != null ? " (Style: " + result.styleName + ")" : "";
+                    System.out.println("Unlocked clothing: " + result.itemName + styleInfo);
+                } else {
+                    gamePanel.getLoadoutScreen().unlockItem(result.type, result.itemName, result.tier);
+                }
             }
         }
     }
@@ -222,11 +234,18 @@ public class LootboxTestScreen {
         String itemName;
         int tier;
         String type;
+        String styleName;
 
         LootResult(Item item) {
             this.itemName = item.getClass().getSimpleName(); // Use class name, not display name
             this.tier = item.getTier();
             this.type = getItemType(item);
+            this.styleName = null;
+
+            // Get style name for clothing items
+            if (item instanceof ClothingItem clothing) {
+                this.styleName = clothing.getSelectedStyle();
+            }
         }
 
         private static String getItemType(Item item) {
@@ -248,7 +267,10 @@ public class LootboxTestScreen {
                 return "Summon";
             } else if (className.contains("consumable") || className.contains("potion")) {
                 return "Consumable";
-            }
+            } else if (className.contains("clothing") || className.contains("tops") ||
+                className.contains("bottoms") || className.contains("accessories")) {
+            return "Clothing";
+        }
             return "Unknown";
         }
     }
