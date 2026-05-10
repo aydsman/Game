@@ -5,7 +5,7 @@ A Java-based 2D action game featuring dungeon crawling, arena combat, wave survi
 ## Project Stats
 
 - **Total Classes:** 105+
-- **Total Lines of Code:** 8,500+
+- **Total Lines of Code:** 16719
 - **Language:** Java 17+
 
 ## Table of Contents

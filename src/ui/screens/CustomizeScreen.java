@@ -544,7 +544,7 @@ public class CustomizeScreen {
                         if (styles.size() == 1) {
                             selected.setSelectedStyle(styles.get(0));
                             SaveData data = SaveManager.load();
-                            data.getEquippedClothingStyles().put(selected.getName(), styles.get(0));
+                            data.getEquippedClothingStyles().put(selected.getName().toLowerCase(), styles.get(0));
                             SaveManager.save(data);
                         }
                     }
@@ -820,7 +820,7 @@ public class CustomizeScreen {
 
         // Load the equipped style from SaveData so the UI shows correct selection
         SaveData saveData = SaveManager.load();
-        String equippedStyle = saveData.getEquippedClothingStyles().get(clothing.getName());
+        String equippedStyle = saveData.getEquippedClothingStyles().get(clothing.getName().toLowerCase());
         if (equippedStyle != null) {
             selectedClothingForStyling.setSelectedStyle(equippedStyle);
         }
@@ -844,30 +844,26 @@ public class CustomizeScreen {
         SaveData data = SaveManager.load();
         Map<String, String> equippedStyles = data.getEquippedClothingStyles();
 
-        // Get equipped items and capitalize first letter to match clothing names
         String topId = tempAppearance.getEquippedTopId();
         if (topId != null && !topId.isEmpty()) {
-            String clothingName = capitalizeFirst(topId);
-            String style = equippedStyles.getOrDefault(clothingName, "default");
-            System.out.println("Top: " + clothingName + " (Style: " + style + ")");
+            String style = equippedStyles.getOrDefault(topId, "default");
+            System.out.println("Top: " + topId + " (Style: " + style + ")");
         } else {
             System.out.println("Top: None");
         }
 
         String bottomId = tempAppearance.getEquippedBottomId();
         if (bottomId != null && !bottomId.isEmpty()) {
-            String clothingName = capitalizeFirst(bottomId);
-            String style = equippedStyles.getOrDefault(clothingName, "default");
-            System.out.println("Bottom: " + clothingName + " (Style: " + style + ")");
+            String style = equippedStyles.getOrDefault(bottomId, "default");
+            System.out.println("Bottom: " + bottomId + " (Style: " + style + ")");
         } else {
             System.out.println("Bottom: None");
         }
 
         String accessoryId = tempAppearance.getEquippedAccessoryId();
         if (accessoryId != null && !accessoryId.isEmpty()) {
-            String clothingName = capitalizeFirst(accessoryId);
-            String style = equippedStyles.getOrDefault(clothingName, "default");
-            System.out.println("Accessory: " + clothingName + " (Style: " + style + ")");
+            String style = equippedStyles.getOrDefault(accessoryId, "default");
+            System.out.println("Accessory: " + accessoryId + " (Style: " + style + ")");
         } else {
             System.out.println("Accessory: None");
         }
@@ -926,7 +922,7 @@ public class CustomizeScreen {
 
                     // Save the equipped style
                     Map<String, String> equippedStyles = saveData.getEquippedClothingStyles();
-                    equippedStyles.put(selectedClothingForStyling.getName(), style);
+                    equippedStyles.put(selectedClothingForStyling.getName().toLowerCase(), style);
                     SaveManager.save(saveData);
 
                     System.out.println("Selected style: " + style + " for " + selectedClothingForStyling.getName());

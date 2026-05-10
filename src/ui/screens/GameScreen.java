@@ -807,6 +807,21 @@ public class GameScreen {
                         activeChest.setItem(dragSourceSlot, destItem);
                         activeChest.setItem(chestSlot, draggedItem);
                         placed = true;
+                    } else if (dragSource >= 1 && dragSource <= 3) {
+                        // From inventory (charm, power, or summon) to chest
+                        combat.Item destItem = activeChest.getItem(chestSlot);
+                        if (destItem == null) {
+                            // Empty slot - just place it
+                            activeChest.setItem(chestSlot, draggedItem);
+                            removeFromInventorySlot(dragSource, dragSourceSlot);
+                            placed = true;
+                        } else {
+                            // Occupied slot - swap
+                            activeChest.setItem(chestSlot, draggedItem);
+                            removeFromInventorySlot(dragSource, dragSourceSlot);
+                            placeInInventorySlot(destItem, dragSource, dragSourceSlot);
+                            placed = true;
+                        }
                     }
                 }
             }
