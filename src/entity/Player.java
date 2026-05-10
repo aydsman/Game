@@ -135,6 +135,8 @@ public class Player extends Entity {
                 hotbar.set(0, startingWeapon);
                 equipHotbarSlot(0);
                 System.out.println("Spawned with weapon: " + weaponName + " (T" + weaponTier + ")");
+            } else {
+                System.err.println("WARNING: Failed to create weapon '" + weaponName + "' (T" + weaponTier + "). Using default Pistol1.");
             }
         }
 
@@ -183,10 +185,13 @@ public class Player extends Entity {
     }
 
     private Item createWeaponFromLoadout(String weaponName, int tier) {
-        // First try the direct switch cases for known aliases
-        Item weapon = switch (weaponName) {
-            case "Glock", "Pistol1" -> new combat.ranged.pistols.Pistol1(tier);
-            case "AK-47", "Rifle1" -> new combat.ranged.rifles.Rifle1(tier);
+        // Normalize weapon name first to handle display names
+        String normalizedName = normalizeWeaponName(weaponName);
+        
+        // Try the direct switch cases for known weapons
+        Item weapon = switch (normalizedName) {
+            case "Pistol1" -> new combat.ranged.pistols.Pistol1(tier);
+            case "Rifle1" -> new combat.ranged.rifles.Rifle1(tier);
             case "Shotgun1" -> new combat.ranged.shotguns.Shotgun1(tier);
             case "SMG1" -> new combat.ranged.smgs.SMG1(tier);
             case "Sniper1" -> new combat.ranged.snipers.Sniper1(tier);
@@ -201,7 +206,7 @@ public class Player extends Entity {
         // If not found in switch, try creating dynamically using reflection
         if (weapon == null) {
             try {
-                Class<?> itemClass = findWeaponClass(weaponName);
+                Class<?> itemClass = findWeaponClass(normalizedName);
                 if (itemClass != null) {
                     // Try constructor with tier parameter
                     try {
@@ -212,10 +217,27 @@ public class Player extends Entity {
                     }
                 }
             } catch (Exception e) {
-                System.err.println("Failed to create weapon: " + weaponName + " (tier " + tier + ")");
+                System.err.println("Failed to create weapon: " + weaponName + " (normalized: " + normalizedName + ", tier " + tier + ") - " + e.getMessage());
             }
         }
         return weapon;
+    }
+    
+    private String normalizeWeaponName(String weaponName) {
+        // Convert display names to class names for consistency
+        return switch (weaponName) {
+            case "Glock", "Pistol1", "Pistol" -> "Pistol1";
+            case "AK-47", "Rifle1", "Rifle" -> "Rifle1";
+            case "Shotgun1", "Shotgun", "Pump - Action", "Pump-Action" -> "Shotgun1";
+            case "SMG1", "SMG", "P90" -> "SMG1";
+            case "Sniper1", "Sniper" -> "Sniper1";
+            case "Sword1", "Sword" -> "Sword1";
+            case "Hammer1", "Hammer" -> "Hammer1";
+            case "Dagger1", "Dagger" -> "Dagger1";
+            case "Mace1", "Mace" -> "Mace1";
+            case "Scythe1", "Scythe" -> "Scythe1";
+            default -> weaponName; // Already normalized or unknown
+        };
     }
     
     private Class<?> findWeaponClass(String weaponName) {
@@ -544,6 +566,10 @@ public class Player extends Entity {
             currencyManager.addGold(enemy.getGoldValue());
             // Save XP to persistent storage
             save.SaveManager.addXP(xp);
+            // Sync local level/XP fields immediately so HUD updates in real-time
+            save.SaveData updatedData = save.SaveManager.load();
+            playerLevel = updatedData.getPlayerLevel();
+            playerXP = updatedData.getPlayerXP();
         }
     }
 

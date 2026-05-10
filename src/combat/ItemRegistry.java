@@ -33,6 +33,7 @@ import combat.powers.KingOfCurses;
 import combat.powers.RinneSharingan;
 import combat.powers.Rinnegan;
 import combat.powers.Sharingan;
+import combat.powers.Haki;
 import combat.consumables.Consumable1;
 import combat.consumables.Consumable2;
 import combat.consumables.Consumable3;
@@ -103,7 +104,8 @@ public class ItemRegistry {
         powers.add(new Lightning()); // Tier 1
         powers.add(new Water()); // Tier 1
         powers.add(new Magma()); // Tier 2
-        powers.add(new Sharingan(3)); // Tier 3
+        powers.add(new Sharingan()); // Tier 3
+        powers.add(new Haki()); // Tier 3
         powers.add(new EarthV2()); // Tier 4
         powers.add(new FireV2()); // Tier 4
         powers.add(new LightningV2()); // Tier 4
