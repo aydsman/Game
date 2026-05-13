@@ -2,7 +2,7 @@ package combat.charms;
 
 public class SpeedCharm2 extends Charm {
     public SpeedCharm2() {
-        this(1);
+        this(2);
     }
 
     public SpeedCharm2(int tier) {
@@ -16,6 +16,11 @@ public class SpeedCharm2 extends Charm {
     private void applyTierMultipliers() {
         // Add tier-specific effects here later
         // For now, just ensures tier is set correctly
+    }
+
+    @Override
+    public double getSpeedBonusFraction() {
+        return 0.10 * tierMultiplier();
     }
 }
 

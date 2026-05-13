@@ -2,11 +2,7 @@ package ui.screens;
 
 import ui.GamePanel;
 import java.awt.*;
-import java.awt.image.BufferedImage;
-import javax.imageio.ImageIO;
 import javax.swing.ImageIcon;
-import java.io.File;
-import java.io.IOException;
 
 public class MenuScreen {
 
@@ -18,11 +14,14 @@ public class MenuScreen {
     private Rectangle arenaBtn     = new Rectangle(680, 200, 115, 60);
     private Rectangle dungeonBtn   = new Rectangle(805, 200, 115, 60);
     private Rectangle hubBtn       = new Rectangle(680, 280, 240, 60);
+    private Rectangle craftingBtn  = new Rectangle(930, 280, 240, 60);
     private Rectangle loadoutBtn   = new Rectangle(680, 360, 240, 60);
     private Rectangle customizeBtn = new Rectangle(680, 440, 240, 60);
     private Rectangle shopBtn      = new Rectangle(680, 520, 240, 60);
-    private Rectangle settingsBtn  = new Rectangle(680, 600, 240, 60);
-    private Rectangle helpBtn      = new Rectangle(680, 680, 240, 60);
+    private Rectangle rewardsBtn   = new Rectangle(680, 600, 240, 60);
+    private Rectangle skillTreeBtn = new Rectangle(680, 680, 240, 60);
+    private Rectangle settingsBtn  = new Rectangle(680, 760, 240, 60);
+    private Rectangle helpBtn      = new Rectangle(680, 840, 240, 50);
     
     // Debug/utility buttons (bottom row)
     private Rectangle graphTestBtn    = new Rectangle(10, 850, 140, 40);
@@ -30,6 +29,8 @@ public class MenuScreen {
     private Rectangle lootboxTestBtn  = new Rectangle(310, 850, 140, 40);
     private Rectangle statsBtn        = new Rectangle(460, 850, 140, 40);
     private Rectangle resetBtn        = new Rectangle(1450, 850, 140, 40);
+    /** Session admin toggle — above RESET (same column). */
+    private Rectangle adminToggleBtn   = new Rectangle(1450, 798, 140, 44);
     
     private boolean showStatsPanel = false;
 
@@ -47,19 +48,44 @@ public class MenuScreen {
     }
 
     public void handleClick(int x, int y) {
-        if (arenaBtn.contains(x, y))     gamePanel.switchScreen("game");
+        if (arenaBtn.contains(x, y))     gamePanel.switchScreen("arenaselection");
         if (dungeonBtn.contains(x, y))   gamePanel.switchScreen("dungeon");
         if (hubBtn.contains(x, y))       gamePanel.switchScreen("hub");
+        if (craftingBtn.contains(x, y))  gamePanel.switchScreen("crafting");
         if (loadoutBtn.contains(x, y))   gamePanel.switchScreen("loadout");
         if (customizeBtn.contains(x, y)) gamePanel.switchScreen("customize");
         if (shopBtn.contains(x, y))      gamePanel.switchScreen("shop");
+        if (rewardsBtn.contains(x, y))   gamePanel.switchScreen("rewards");
+        if (skillTreeBtn.contains(x, y)) gamePanel.switchScreen("skilltree");
         if (settingsBtn.contains(x, y))  gamePanel.switchScreen("settings");
         if (helpBtn.contains(x, y))      gamePanel.switchScreen("help");
         if (graphTestBtn.contains(x, y)) gamePanel.switchScreen("graphtest");
         if (itemsBtn.contains(x, y))     gamePanel.switchScreen("items");
         if (lootboxTestBtn.contains(x, y)) gamePanel.switchScreen("lootboxtest");
         if (statsBtn.contains(x, y))     showStatsPanel = !showStatsPanel;
+        if (adminToggleBtn.contains(x, y)) gamePanel.toggleSessionAdminMode();
         if (resetBtn.contains(x, y))     handleReset();
+    }
+    
+    public void handleMouseMove(int x, int y) {
+        hoveredButton = null;
+        if (arenaBtn.contains(x, y)) hoveredButton = "arena";
+        if (dungeonBtn.contains(x, y)) hoveredButton = "dungeon";
+        if (hubBtn.contains(x, y)) hoveredButton = "hub";
+        if (craftingBtn.contains(x, y)) hoveredButton = "crafting";
+        if (loadoutBtn.contains(x, y)) hoveredButton = "loadout";
+        if (customizeBtn.contains(x, y)) hoveredButton = "customize";
+        if (shopBtn.contains(x, y)) hoveredButton = "shop";
+        if (rewardsBtn.contains(x, y)) hoveredButton = "rewards";
+        if (skillTreeBtn.contains(x, y)) hoveredButton = "skilltree";
+        if (settingsBtn.contains(x, y)) hoveredButton = "settings";
+        if (helpBtn.contains(x, y)) hoveredButton = "help";
+        if (graphTestBtn.contains(x, y)) hoveredButton = "graph";
+        if (itemsBtn.contains(x, y)) hoveredButton = "items";
+        if (lootboxTestBtn.contains(x, y)) hoveredButton = "lootbox";
+        if (statsBtn.contains(x, y)) hoveredButton = "stats";
+        if (adminToggleBtn.contains(x, y)) hoveredButton = "admin";
+        if (resetBtn.contains(x, y)) hoveredButton = "reset";
     }
     
     private void handleReset() {
@@ -122,9 +148,12 @@ public class MenuScreen {
         drawStyledButton(g, arenaBtn, "Arena", new Color(231, 76, 60), hoveredButton == "arena");
         drawStyledButton(g, dungeonBtn, "Dungeon", new Color(192, 57, 43), hoveredButton == "dungeon");
         drawStyledButton(g, hubBtn, "Hub", new Color(52, 152, 219), hoveredButton == "hub");
+        drawStyledButton(g, craftingBtn, "Crafting", new Color(80, 190, 140), hoveredButton == "crafting");
         drawStyledButton(g, loadoutBtn, "Loadout", new Color(147, 112, 219), hoveredButton == "loadout");
         drawStyledButton(g, customizeBtn, "Customize", new Color(155, 89, 182), hoveredButton == "customize");
         drawStyledButton(g, shopBtn, "Shop", new Color(46, 204, 113), hoveredButton == "shop");
+        drawStyledButton(g, rewardsBtn, "Rewards", new Color(241, 196, 15), hoveredButton == "rewards");
+        drawStyledButton(g, skillTreeBtn, "Skill Tree", new Color(255, 170, 60), hoveredButton == "skilltree");
         drawStyledButton(g, settingsBtn, "Settings", new Color(149, 165, 166), hoveredButton == "settings");
         drawStyledButton(g, helpBtn, "Help", new Color(149, 165, 166), hoveredButton == "help");
 
@@ -139,8 +168,31 @@ public class MenuScreen {
             drawStatsPanel(g);
         }
 
+        drawMenuAdminToggle(g);
+
         // Draw Reset button (danger button)
         drawStyledResetButton(g, resetBtn, "RESET", hoveredButton == "reset");
+    }
+
+    private void drawMenuAdminToggle(Graphics2D g) {
+        boolean on = gamePanel.isSessionAdminMode();
+        boolean h = "admin".equals(hoveredButton);
+        Color fill = h
+                ? (on ? new Color(90, 170, 120) : new Color(210, 130, 55))
+                : (on ? new Color(60, 130, 85) : new Color(145, 88, 32));
+        g.setColor(fill);
+        g.fillRoundRect(adminToggleBtn.x, adminToggleBtn.y, adminToggleBtn.width, adminToggleBtn.height, 8, 8);
+        g.setColor(new Color(40, 38, 36));
+        g.setStroke(new BasicStroke(1.5f));
+        g.drawRoundRect(adminToggleBtn.x, adminToggleBtn.y, adminToggleBtn.width, adminToggleBtn.height, 8, 8);
+        g.setStroke(new BasicStroke(1f));
+        g.setColor(Color.WHITE);
+        g.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        String label = on ? "Admin: ON" : "Admin: OFF";
+        FontMetrics fm = g.getFontMetrics();
+        int tx = adminToggleBtn.x + (adminToggleBtn.width - fm.stringWidth(label)) / 2;
+        int ty = adminToggleBtn.y + (adminToggleBtn.height + fm.getAscent() - fm.getDescent()) / 2;
+        g.drawString(label, tx, ty);
     }
 
     private void drawStatsPanel(Graphics2D g) {
@@ -231,6 +283,8 @@ public class MenuScreen {
         g.drawString("Cash: $" + data.getCash(), col2X, statsY);
         g.setColor(new Color(52, 152, 219));
         g.drawString("Gems: ◆" + data.getGems(), col2X, statsY + lineHeight);
+        g.setColor(new Color(255, 200, 80));
+        g.drawString("Skill Points: " + data.getSkillPoints(), col2X, statsY + lineHeight * 2);
         
         // Close instruction
         g.setColor(new Color(150, 150, 170));

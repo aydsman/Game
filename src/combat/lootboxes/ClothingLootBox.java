@@ -2,8 +2,6 @@ package combat.lootboxes;
 
 import combat.Item;
 import combat.clothing.ClothingItem;
-import save.SaveManager;
-import save.SaveData;
 import java.util.*;
 
 /**
@@ -25,7 +23,6 @@ public abstract class ClothingLootBox extends LootBox {
      */
     @Override
     public Item open() {
-        SaveData saveData = SaveManager.load();
         int maxAttempts = 50;
         int attempts = 0;
 
@@ -46,14 +43,9 @@ public abstract class ClothingLootBox extends LootBox {
                 return null;
             }
 
-            // Stage 3: Get all items with available styles for this tier + type
-            List<String> itemsWithStyles = getItemsWithAvailableStyles(selectedTier, selectedType, saveData);
-
-            // If no items have available styles, show message and return null
-            if (itemsWithStyles.isEmpty()) {
-                System.out.println("All styles in this lootbox are already unlocked!");
-                return null;
-            }
+            // Stage 3: Get all items for this tier + type
+            List<String> itemsWithStyles = getItemsForTierType(selectedTier, selectedType);
+            if (itemsWithStyles.isEmpty()) return null;
 
             // Pick a random item from those with available styles
             String itemName = itemsWithStyles.get(new Random().nextInt(itemsWithStyles.size()));
@@ -63,15 +55,12 @@ public abstract class ClothingLootBox extends LootBox {
             if (baseItem instanceof ClothingItem) {
                 ClothingItem clothing = (ClothingItem) baseItem;
                 String clothingName = clothing.getName();
-                List<String> availableStyles = getAvailableStyles(clothingName, clothing.getStyleOptions(), saveData);
-
-                // Pick a random available style
-                String selectedStyle = availableStyles.get(new Random().nextInt(availableStyles.size()));
+                List<String> allowedStyles = getAllowedStylesForItem(clothingName, clothing.getStyleOptions());
+                if (allowedStyles.isEmpty()) {
+                    continue;
+                }
+                String selectedStyle = allowedStyles.get(new Random().nextInt(allowedStyles.size()));
                 clothing.setSelectedStyle(selectedStyle);
-
-                // Unlock this style in SaveData
-                unlockClothingStyle(clothingName, selectedStyle, saveData);
-
                 return clothing;
             } else {
                 // Not a clothing item, return it as-is
@@ -79,34 +68,21 @@ public abstract class ClothingLootBox extends LootBox {
             }
         }
 
-        // Fallback: couldn't find any valid item (all unlocked)
-        System.out.println("All styles in this lootbox are already unlocked!");
+        // Fallback: couldn't find any valid item
         return null;
     }
 
     /**
      * Get list of items in a tier that have at least one available style
      */
-    private List<String> getItemsWithAvailableStyles(int tier, String itemType, SaveData saveData) {
+    private List<String> getItemsForTierType(int tier, String itemType) {
         List<String> result = new ArrayList<>();
         Map<String, List<String>> tierMap = itemCatalog.get(tier);
         if (tierMap == null) return result;
 
         List<String> items = tierMap.get(itemType);
         if (items == null) return result;
-
-        for (String itemName : items) {
-            Item baseItem = createItem(itemName, tier);
-            if (baseItem instanceof ClothingItem clothing) {
-                List<String> availableStyles = getAvailableStyles(clothing.getName(), clothing.getStyleOptions(), saveData);
-                if (!availableStyles.isEmpty()) {
-                    result.add(itemName);
-                }
-            } else {
-                // Non-clothing items are always available
-                result.add(itemName);
-            }
-        }
+        result.addAll(items);
         return result;
     }
 
@@ -115,39 +91,6 @@ public abstract class ClothingLootBox extends LootBox {
      * Return allStyles to allow all styles (default behavior).
      */
     protected abstract List<String> getAllowedStylesForItem(String itemName, List<String> allStyles);
-
-    /**
-     * Get available styles for a clothing item (styles not yet unlocked and allowed by this lootbox)
-     */
-    private List<String> getAvailableStyles(String clothingName, List<String> allStyles, SaveData saveData) {
-        // First, filter by what this lootbox allows
-        List<String> allowedStyles = getAllowedStylesForItem(clothingName, allStyles);
-
-        // Then, filter out already unlocked styles
-        Set<String> unlockedStyles = saveData.getUnlockedClothingStyles().getOrDefault(clothingName, new HashSet<>());
-        List<String> availableStyles = new ArrayList<>();
-
-        for (String style : allowedStyles) {
-            if (!unlockedStyles.contains(style)) {
-                availableStyles.add(style);
-            }
-        }
-
-        return availableStyles;
-    }
-
-    /**
-     * Unlock a clothing style in SaveData
-     */
-    private void unlockClothingStyle(String clothingName, String styleName, SaveData saveData) {
-        Map<String, Set<String>> unlockedStyles = saveData.getUnlockedClothingStyles();
-        unlockedStyles.computeIfAbsent(clothingName, k -> new HashSet<>()).add(styleName);
-        
-        // Also unlock the clothing item ID
-        saveData.getUnlockedClothingIds().add(clothingName.toLowerCase());
-        
-        SaveManager.save(saveData);
-    }
 
     protected Integer rollForTier() {
         if (tierProbabilities.isEmpty()) {

@@ -4,6 +4,7 @@ import java.awt.Color;
 import java.awt.Graphics2D;
 import combat.Item;
 import combat.Ranged;
+import world.arena.ArenaPathfinding;
 
 public class Entity {
     protected int x, y; // position
@@ -16,6 +17,13 @@ public class Entity {
     protected Color color = Color.WHITE; // default color
     protected Item heldWeapon; // weapon the entity is holding (null if nothing)
     protected boolean dead = false; // death status
+    /** Arena pathfinding state (enemies / bosses with obstacles). */
+    protected final ArenaPathfinding.PathAgentState pathAgentState = new ArenaPathfinding.PathAgentState();
+
+    public ArenaPathfinding.PathAgentState getPathAgentState() {
+        return pathAgentState;
+    }
+
     protected int level = 1; // entity level
     protected double currentXP = 0; // current experience points
     protected double maxXP = 100; // XP needed for next level

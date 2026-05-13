@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 
 public class CustomizeScreen {
 
@@ -27,7 +28,8 @@ public class CustomizeScreen {
 
     private boolean clothingSelectionMode = false;
     private ClothingType selectedClothingType = null;
-    private Rectangle clothingSelectionArea = new Rectangle(50, 150, 700, 600);
+    /** Below category tabs (y≈100–160) so the picker does not cover Accessories/Tops/Bottoms/Body. */
+    private Rectangle clothingSelectionArea = new Rectangle(50, 182, 700, 580);
 
     // Style selection overlay state
     private boolean styleSelectionMode = false;
@@ -121,25 +123,83 @@ public class CustomizeScreen {
 
     public void handleClick(int x, int y) {
         if (styleSelectionMode) {
-            // Handle style selection clicks
             if (styleCloseBtn.contains(x, y)) {
                 closeStyleSelector();
                 return;
-            } else if (styleSelectionArea.contains(x, y)) {
+            }
+            if (accessoriesBtn.contains(x, y)) {
+                closeStyleSelector();
+                clothingSelectionMode = true;
+                selectedClothingType = ClothingType.ACCESSORY;
+                return;
+            }
+            if (topsBtn.contains(x, y)) {
+                closeStyleSelector();
+                clothingSelectionMode = true;
+                selectedClothingType = ClothingType.TOP;
+                return;
+            }
+            if (bottomsBtn.contains(x, y)) {
+                closeStyleSelector();
+                clothingSelectionMode = true;
+                selectedClothingType = ClothingType.BOTTOM;
+                return;
+            }
+            if (customizeBodyBtn.contains(x, y)) {
+                closeStyleSelector();
+                clothingSelectionMode = false;
+                selectedClothingType = null;
+                bodyMode = true;
+                return;
+            }
+            if (confirmBtn.contains(x, y)) {
+                saveAppearance();
+                gamePanel.switchScreen("menu");
+                return;
+            }
+            if (backBtn.contains(x, y)) {
+                gamePanel.switchScreen("menu");
+                return;
+            }
+            if (styleSelectionArea.contains(x, y)) {
                 handleStyleSelectionClick(x, y);
             } else {
-                // Click outside, close style selection
                 closeStyleSelector();
             }
             return;
         }
-        
+
         if (clothingSelectionMode) {
-            // Handle clothing selection clicks
+            if (accessoriesBtn.contains(x, y)) {
+                selectedClothingType = ClothingType.ACCESSORY;
+                return;
+            }
+            if (topsBtn.contains(x, y)) {
+                selectedClothingType = ClothingType.TOP;
+                return;
+            }
+            if (bottomsBtn.contains(x, y)) {
+                selectedClothingType = ClothingType.BOTTOM;
+                return;
+            }
+            if (customizeBodyBtn.contains(x, y)) {
+                clothingSelectionMode = false;
+                selectedClothingType = null;
+                bodyMode = true;
+                return;
+            }
+            if (confirmBtn.contains(x, y)) {
+                saveAppearance();
+                gamePanel.switchScreen("menu");
+                return;
+            }
+            if (backBtn.contains(x, y)) {
+                gamePanel.switchScreen("menu");
+                return;
+            }
             if (clothingSelectionArea.contains(x, y)) {
                 handleClothingSelectionClick(x, y);
             } else {
-                // Click outside, close selection
                 clothingSelectionMode = false;
                 selectedClothingType = null;
             }
@@ -876,6 +936,33 @@ public class CustomizeScreen {
     }
 
     /**
+     * Build the full style list for a clothing piece:
+     * default style + lootbox styles + non-lootbox unlockable styles.
+     * Ordering is stable and deduplicated for consistent UI.
+     */
+    private List<String> getAllStylesForSelection(ClothingItem item) {
+        LinkedHashSet<String> ordered = new LinkedHashSet<>();
+        String defaultStyle = item.getDefaultStyle();
+        if (defaultStyle != null && !defaultStyle.isEmpty()) {
+            ordered.add(defaultStyle);
+        }
+        ordered.addAll(item.getStyleOptions());
+        ordered.addAll(item.getUnlockableStyles());
+        return new ArrayList<>(ordered);
+    }
+
+    private Set<String> getUnlockedStylesForItem(SaveData saveData, ClothingItem item) {
+        Set<String> result = new HashSet<>();
+        if (saveData.getUnlockedClothingStyles().containsKey(item.getName())) {
+            result.addAll(saveData.getUnlockedClothingStyles().get(item.getName()));
+        }
+        if (saveData.getUnlockedClothingStyles().containsKey(item.getName().toLowerCase())) {
+            result.addAll(saveData.getUnlockedClothingStyles().get(item.getName().toLowerCase()));
+        }
+        return result;
+    }
+
+    /**
      * Handle style selection clicks
      */
     private void handleStyleSelectionClick(int x, int y) {
@@ -885,16 +972,9 @@ public class CustomizeScreen {
         }
 
         SaveData saveData = SaveManager.load();
-        List<String> styles = selectedClothingForStyling.getStyleOptions();
-        Set<String> unlockedStyles = saveData.getUnlockedClothingStyles().getOrDefault(selectedClothingForStyling.getName(), new HashSet<>());
+        List<String> styles = getAllStylesForSelection(selectedClothingForStyling);
+        Set<String> unlockedStyles = getUnlockedStylesForItem(saveData, selectedClothingForStyling);
         String defaultStyle = selectedClothingForStyling.getDefaultStyle();
-
-        // Create combined list with default style first (if it exists)
-        List<String> allStyles = new ArrayList<>();
-        if (defaultStyle != null) {
-            allStyles.add(defaultStyle);
-        }
-        allStyles.addAll(styles);
 
         int startX = styleSelectionArea.x + 30;
         int startY = styleSelectionArea.y + 90;
@@ -902,8 +982,8 @@ public class CustomizeScreen {
         int spacing = 12;
         int stylesPerRow = 6;
 
-        for (int i = 0; i < allStyles.size(); i++) {
-            String style = allStyles.get(i);
+        for (int i = 0; i < styles.size(); i++) {
+            String style = styles.get(i);
             int col = i % stylesPerRow;
             int row = i / stylesPerRow;
             int styleX = startX + col * (slotSize + spacing);
@@ -974,16 +1054,9 @@ public class CustomizeScreen {
         g.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         g.drawString("Locked styles cannot be selected yet", pickerX + 30, pickerY + 65);
 
-        List<String> styles = selectedClothingForStyling.getStyleOptions();
-        Set<String> unlockedStyles = saveData.getUnlockedClothingStyles().getOrDefault(selectedClothingForStyling.getName(), new HashSet<>());
+        Set<String> unlockedStyles = getUnlockedStylesForItem(saveData, selectedClothingForStyling);
         String defaultStyle = selectedClothingForStyling.getDefaultStyle();
-
-        // Create combined list with default style first (if it exists)
-        List<String> allStyles = new ArrayList<>();
-        if (defaultStyle != null) {
-            allStyles.add(defaultStyle);
-        }
-        allStyles.addAll(styles);
+        List<String> allStyles = getAllStylesForSelection(selectedClothingForStyling);
 
         int startX = pickerX + 30;
         int startY = pickerY + 90;

@@ -63,22 +63,26 @@ public class Lootbox1 extends LootBox {
         // Charms (fixed items - use simple syntax without tier)
         addItem("Charm", "Charm1");
         addItem("Charm", "SpeedCharm");
+        addItem("Charm", "DamageCharm1");
+        addItem("Charm", "DamageCharm2");
+        addItem("Charm", "DamageCharm3");
 
         // Powers (use simple syntax - tier 1+ powers will be accessible)
-        addItem("Power", "Earth");
-        addItem("Power", "Fire");
-        addItem("Power", "Light");
-        addItem("Power", "Lightning");
-        addItem("Power", "Water");
-        addItem("Power", "Magma");
-        addItem("Power", "EarthV2");
-        addItem("Power", "FireV2");
-        addItem("Power", "LightningV2");
-        addItem("Power", "MagmaV2");
-        addItem("Power", "WaterV2");
-        addItem("Power", "Infinity");
-        addItem("Power", "KingOfCurses");
-        addItem("Power", "RinneSharingan");
+        addItem("Power", "Earth", 1.0);
+        addItem("Power", "Fire", 1.0);
+        addItem("Power", "Light", 1.0);
+        addItem("Power", "Lightning", 0.9);
+        addItem("Power", "Water", 1.0);
+        addItem("Power", "Magma", 0.85);
+        addItem("Power", "Overgrowth", 0.7);
+        addItem("Power", "EarthV2", 0.6);
+        addItem("Power", "FireV2", 0.6);
+        addItem("Power", "LightningV2", 0.55);
+        addItem("Power", "MagmaV2", 0.55);
+        addItem("Power", "WaterV2", 0.6);
+        addItem("Power", "Infinity", 0.2);
+        addItem("Power", "KingOfCurses", 0.22);
+        addItem("Power", "RinneSharingan", 0.24);
 
         // Summons
         addItem("Summon", "Summon1");

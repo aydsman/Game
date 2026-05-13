@@ -17,4 +17,9 @@ public class Charm1 extends Charm {
         // Add tier-specific effects here later
         // For now, just ensures tier is set correctly
     }
+
+    @Override
+    public double getMaxHpBonusFraction() {
+        return 0.10 * tierMultiplier();
+    }
 }

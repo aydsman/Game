@@ -17,7 +17,7 @@ public class SettingsScreen {
     }
 
     public void handleClick(int x, int y) {
-        if (backBtn.contains(x, y)) gamePanel.switchScreen("menu");
+        if (backBtn.contains(x, y)) gamePanel.switchScreen(gamePanel.getPreviousScreen());
     }
 
     public void draw(Graphics2D g, int width, int height) {

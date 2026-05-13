@@ -15,6 +15,8 @@ import combat.ranged.rifles.Rifle1;
 import util.KeyHandler;
 import util.MouseHandler;
 import currency.CurrencyManager;
+import java.awt.Rectangle;
+import java.util.List;
 
 public class Player extends Entity {
 
@@ -51,6 +53,7 @@ public class Player extends Entity {
     private double baseHp; // Base HP before charm effects
     private double baseMaxHp; // Base max HP before charm effects
     private double baseSpeed; // Base speed before charm effects
+    private double baseDamage; // Base damage multiplier before charm effects
     private Map<Consumable.ConsumableEffectType, ActiveConsumableEffect> activeEffects = new HashMap<>();
     private CurrencyManager currencyManager = new CurrencyManager();
 
@@ -70,17 +73,15 @@ public class Player extends Entity {
         // Load persistent stats from save data
         loadPersistentStats();
 
-        // Calculate base stats from player level
-        // Level 1: 200 HP, 7.0 speed, 1.0 damage
-        // Each level adds: +20 HP, +0.2 speed, +0.05 damage
-        int levelBonus = playerLevel - 1;
-        baseHp = 200 + (levelBonus * 20);
-        baseMaxHp = baseHp;
+        // Base combat stats (level does not modify these; charms/consumables can)
+        baseHp = 200;
+        baseMaxHp = 200;
         hp = baseHp;
         maxHp = (int) baseMaxHp;
-        baseSpeed = 7.0 + (levelBonus * 0.2);
+        baseSpeed = 7.0;
         speed = baseSpeed;
-        damage = 1.0 + (levelBonus * 0.05);
+        baseDamage = 1.0;
+        damage = baseDamage;
         dead = false;
 
         // combat
@@ -268,6 +269,9 @@ public class Player extends Entity {
         return switch (charmName) {
             case "Charm1", "SimpleCharm" -> new combat.charms.Charm1();
             case "SpeedCharm" -> new combat.charms.SpeedCharm();
+            case "DamageCharm1" -> new combat.charms.DamageCharm1();
+            case "DamageCharm2" -> new combat.charms.DamageCharm2();
+            case "DamageCharm3" -> new combat.charms.DamageCharm3();
             default -> {
                 // Try dynamic creation
                 try {
@@ -289,6 +293,7 @@ public class Player extends Entity {
             case "Lightning" -> new combat.powers.Lightning();
             case "Water" -> new combat.powers.Water();
             case "Magma" -> new combat.powers.Magma();
+            case "Overgrowth" -> new combat.powers.Overgrowth();
             case "FireV2" -> new combat.powers.FireV2();
             case "EarthV2" -> new combat.powers.EarthV2();
             case "LightningV2" -> new combat.powers.LightningV2();
@@ -303,8 +308,13 @@ public class Player extends Entity {
                     Class<?> powerClass = Class.forName("combat.powers." + powerName);
                     yield (combat.powers.Power) powerClass.getConstructor().newInstance();
                 } catch (Exception e) {
-                    System.err.println("Failed to create power: " + powerName);
-                    yield null;
+                    try {
+                        Class<?> powerClass = Class.forName("combat.powers.fruits." + powerName);
+                        yield (combat.powers.Power) powerClass.getConstructor().newInstance();
+                    } catch (Exception ex) {
+                        System.err.println("Failed to create power: " + powerName);
+                        yield null;
+                    }
                 }
             }
         };
@@ -351,27 +361,23 @@ public class Player extends Entity {
         };
     }
 
-    // Recalculate HP and Speed based on equipped charms (additive stacking)
+    // Recalculate HP, speed, and damage from each equipped charm (additive stacking)
     public void recalculateCharmEffects() {
-        int charmCount = 0;
-        int speedCharmCount = 0;
+        double totalHpBoost = 0;
+        double totalSpeedBoost = 0;
+        double totalDamageBoost = 0;
         for (int i = 0; i < inventory.getMaxCharms(); i++) {
             combat.charms.Charm charm = inventory.getCharm(i);
             if (charm != null) {
-                charmCount++;
-                if (charm instanceof combat.charms.SpeedCharm) {
-                    speedCharmCount++;
-                }
+                totalHpBoost += charm.getMaxHpBonusFraction();
+                totalSpeedBoost += charm.getSpeedBonusFraction();
+                totalDamageBoost += charm.getDamageBonusFraction();
             }
         }
-        // Each charm adds 10% of base HP
-        double totalHpBoost = charmCount * 0.1;
-        setHp((int)(baseHp + (baseHp * totalHpBoost)));
-        setMaxHp((int)(baseMaxHp + (baseMaxHp * totalHpBoost)));
-
-        // Each SpeedCharm adds 10% of base speed
-        double totalSpeedBoost = speedCharmCount * 0.10;
+        setHp(baseHp + (baseHp * totalHpBoost));
+        setMaxHp(baseMaxHp + (baseMaxHp * totalHpBoost));
         speed = baseSpeed + (baseSpeed * totalSpeedBoost);
+        damage = baseDamage + (baseDamage * totalDamageBoost);
     }
 
     public void resetMouseClicks(MouseHandler mouse) {
@@ -382,16 +388,28 @@ public class Player extends Entity {
     }
 
     public void update(KeyHandler key, MouseHandler mouse, int arenaWidth, int arenaHeight) {
+        update(key, mouse, arenaWidth, arenaHeight, null);
+    }
+
+    /**
+     * @param arenaObstacles solid rectangles in world space; may be null or empty
+     */
+    public void update(KeyHandler key, MouseHandler mouse, int arenaWidth, int arenaHeight, List<Rectangle> arenaObstacles) {
+        int oldX = x;
+        int oldY = y;
+        int newX = oldX;
+        int newY = oldY;
         if (key != null) {
-            if (key.upPressed)    y -= (int) speed;
-            if (key.downPressed)  y += (int) speed;
-            if (key.leftPressed)  x -= (int) speed;
-            if (key.rightPressed) x += (int) speed;
+            if (key.upPressed)    newY -= (int) speed;
+            if (key.downPressed)  newY += (int) speed;
+            if (key.leftPressed)  newX -= (int) speed;
+            if (key.rightPressed) newX += (int) speed;
         }
 
-        // clamp player to arena bounds
-        x = Math.max(0, Math.min(x, arenaWidth - w));
-        y = Math.max(0, Math.min(y, arenaHeight - l));
+        int[] resolved = world.arena.ArenaCollision.resolveMovement(
+                oldX, oldY, newX, newY, w, l, arenaObstacles, arenaWidth, arenaHeight);
+        x = resolved[0];
+        y = resolved[1];
 
         // Handle reload
         if (key != null && key.rPressed && heldWeapon instanceof combat.Ranged) {
@@ -430,7 +448,7 @@ public class Player extends Entity {
         }
 
         // update projectiles
-        updateProjectiles();
+        updateProjectiles(arenaObstacles, arenaWidth, arenaHeight);
 
         // check death
         checkDeath();
@@ -521,13 +539,24 @@ public class Player extends Entity {
     public double getBaseHp() { return baseHp; }
     public double getBaseMaxHp() { return baseMaxHp; }
 
+    public double getBaseSpeed() { return baseSpeed; }
+
+    public double getBaseDamage() { return baseDamage; }
+
     public void updateProjectiles() {
+        updateProjectiles(null, 10000, 10000);
+    }
+
+    public void updateProjectiles(List<Rectangle> arenaObstacles, int arenaWidth, int arenaHeight) {
         for (Projectile p : projectiles) {
             p.update();
         }
-        // Remove projectiles that go off screen (simple cleanup)
-        // Increased bounds for dungeon arena (larger world)
-        projectiles.removeIf(p -> p.getX() < 0 || p.getX() > 10000 || p.getY() < 0 || p.getY() > 10000);
+        int maxX = arenaWidth > 0 ? arenaWidth : 10000;
+        int maxY = arenaHeight > 0 ? arenaHeight : 10000;
+        projectiles.removeIf(p -> {
+            if (p.getX() < 0 || p.getX() > maxX || p.getY() < 0 || p.getY() > maxY) return true;
+            return world.arena.ArenaCollision.projectileHitsObstacle(p.getX(), p.getY(), p.getRadius(), arenaObstacles);
+        });
     }
 
     public void checkProjectileCollisions(entity.EnemyManager enemyManager) {
@@ -657,6 +686,10 @@ public class Player extends Entity {
      * @return The original leftPressed state (for restoration)
      */
     public boolean handleShootingMechanics(MouseHandler mouse, KeyHandler key, boolean shouldDisableShooting, Runnable preUpdateLogic, int arenaWidth, int arenaHeight) {
+        return handleShootingMechanics(mouse, key, shouldDisableShooting, preUpdateLogic, arenaWidth, arenaHeight, null);
+    }
+
+    public boolean handleShootingMechanics(MouseHandler mouse, KeyHandler key, boolean shouldDisableShooting, Runnable preUpdateLogic, int arenaWidth, int arenaHeight, List<Rectangle> arenaObstacles) {
         // Save original mouse state
         boolean wasLeftPressed = mouse.leftPressed;
         boolean wasLeftClicked = mouse.leftClicked;
@@ -673,7 +706,7 @@ public class Player extends Entity {
         }
 
         // Update player (handles movement, shooting, projectiles, etc.)
-        update(key, mouse, arenaWidth, arenaHeight);
+        update(key, mouse, arenaWidth, arenaHeight, arenaObstacles);
 
         // Restore leftPressed so drag doesn't break (don't restore leftClicked - it's one-shot)
         mouse.leftPressed = wasLeftPressed;

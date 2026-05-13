@@ -18,25 +18,12 @@ public class Boss extends Entity {
     }
 
     public void move(Player player, int arenaWidth, int arenaHeight) {
-        int playerCenterX = player.getCenterX();
-        int playerCenterY = player.getCenterY();
-        int bossCenterX = getCenterX();
-        int bossCenterY = getCenterY();
+        move(player, arenaWidth, arenaHeight, null);
+    }
 
-        // calculate direction to player
-        int dx = playerCenterX - bossCenterX;
-        int dy = playerCenterY - bossCenterY;
-
-        // normalize and move toward player
-        double distance = Math.sqrt(dx * dx + dy * dy);
-        if (distance > 0) {
-            x += (int) ((dx / distance) * speed);
-            y += (int) ((dy / distance) * speed);
-        }
-
-        // clamp to arena bounds
-        x = Math.max(0, Math.min(x, arenaWidth - w));
-        y = Math.max(0, Math.min(y, arenaHeight - l));
+    public void move(Player player, int arenaWidth, int arenaHeight, java.util.List<java.awt.Rectangle> obstacles) {
+        int step = Math.max(1, (int) Math.round(speed));
+        world.arena.ArenaPathfinding.applyChaseStep(this, player, obstacles, arenaWidth, arenaHeight, step);
     }
 
     public void drawHealthBar(Graphics2D g, int screenWidth, int screenHeight) {

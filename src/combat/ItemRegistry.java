@@ -16,6 +16,9 @@ import combat.charms.SpeedCharm2;
 import combat.charms.SpeedCharm3;
 import combat.charms.HealthCharm2;
 import combat.charms.HealthCharm3;
+import combat.charms.DamageCharm1;
+import combat.charms.DamageCharm2;
+import combat.charms.DamageCharm3;
 import combat.summons.Summon1;
 import combat.powers.Fire;
 import combat.powers.Light;
@@ -23,6 +26,7 @@ import combat.powers.Earth;
 import combat.powers.Lightning;
 import combat.powers.Water;
 import combat.powers.Magma;
+import combat.powers.Overgrowth;
 import combat.powers.EarthV2;
 import combat.powers.FireV2;
 import combat.powers.LightningV2;
@@ -34,6 +38,27 @@ import combat.powers.RinneSharingan;
 import combat.powers.Rinnegan;
 import combat.powers.Sharingan;
 import combat.powers.Haki;
+import combat.powers.Shadow;
+import combat.powers.Eclipse;
+import combat.powers.Crystal;
+import combat.powers.Storm;
+import combat.powers.Plasma;
+import combat.powers.Nightbloom;
+import combat.powers.Cataclysm;
+import combat.powers.fruits.BombFruit;
+import combat.powers.fruits.SmokeFruit;
+import combat.powers.fruits.GasFruit;
+import combat.powers.fruits.StringFruit;
+import combat.powers.fruits.SandFruit;
+import combat.powers.fruits.VenomFruit;
+import combat.powers.fruits.VinesFruit;
+import combat.powers.fruits.MagnetFruit;
+import combat.powers.fruits.GravityFruit;
+import combat.powers.fruits.MochiFruit;
+import combat.powers.fruits.OpOpFruit;
+import combat.powers.fruits.LeopardFruit;
+import combat.powers.fruits.QuakeFruit;
+import combat.powers.fruits.NikaFruit;
 import combat.consumables.Consumable1;
 import combat.consumables.Consumable2;
 import combat.consumables.Consumable3;
@@ -84,13 +109,16 @@ public class ItemRegistry {
         weapons.add(new Scythe1(1));
 
         // Register other item types with their fixed tiers
-        // Charms sorted by type: Health charms first (tier 1-3), then Speed charms (tier 1-3)
+        // Charms: health (I–III), speed (I–III), damage (I–III)
         charms.add(new Charm1()); // Simple Health Charm - Tier 1
         charms.add(new HealthCharm2()); // Health Charm - Tier 2
         charms.add(new HealthCharm3()); // Advanced Health Charm - Tier 3
         charms.add(new SpeedCharm()); // Simple Speed Charm - Tier 1
         charms.add(new SpeedCharm2()); // Speed Charm - Tier 2
         charms.add(new SpeedCharm3()); // Advanced Speed Charm - Tier 3
+        charms.add(new DamageCharm1()); // Tier I
+        charms.add(new DamageCharm2()); // Tier II
+        charms.add(new DamageCharm3()); // Tier III
         summons.add(new Summon1()); // Tier 1
         summons.add(new combat.summons.Summon2()); // Tier 2
         summons.add(new combat.summons.Summon3()); // Tier 3
@@ -104,17 +132,39 @@ public class ItemRegistry {
         powers.add(new Lightning()); // Tier 1
         powers.add(new Water()); // Tier 1
         powers.add(new Magma()); // Tier 2
+        powers.add(new Overgrowth()); // Tier 2
+        powers.add(new Shadow()); // Tier 2
+        powers.add(new Crystal()); // Tier 2
+        powers.add(new Storm()); // Tier 2
+        powers.add(new BombFruit()); // Tier 2
+        powers.add(new SmokeFruit()); // Tier 2
+        powers.add(new GasFruit()); // Tier 2
+        powers.add(new StringFruit()); // Tier 2
+        powers.add(new SandFruit()); // Tier 2
         powers.add(new Sharingan()); // Tier 3
         powers.add(new Haki()); // Tier 3
+        powers.add(new Eclipse()); // Tier 3
+        powers.add(new Plasma()); // Tier 3
+        powers.add(new VenomFruit()); // Tier 3
+        powers.add(new VinesFruit()); // Tier 3
+        powers.add(new MagnetFruit()); // Tier 3
+        powers.add(new GravityFruit()); // Tier 3
         powers.add(new EarthV2()); // Tier 4
         powers.add(new FireV2()); // Tier 4
         powers.add(new LightningV2()); // Tier 4
         powers.add(new MagmaV2()); // Tier 4
         powers.add(new Rinnegan(4)); // Tier 4
         powers.add(new WaterV2()); // Tier 4
+        powers.add(new Nightbloom()); // Tier 4
+        powers.add(new MochiFruit()); // Tier 4
+        powers.add(new OpOpFruit()); // Tier 4
+        powers.add(new LeopardFruit()); // Tier 4
         powers.add(new Infinity()); // Tier 5
         powers.add(new KingOfCurses()); // Tier 5
         powers.add(new RinneSharingan()); // Tier 5
+        powers.add(new Cataclysm()); // Tier 5
+        powers.add(new QuakeFruit()); // Tier 5
+        powers.add(new NikaFruit()); // Tier 5
 
         // Consumables sorted by name, then by tier
         consumables.add(new Consumable1()); // Tier 2 (like Fortnite mini shields)

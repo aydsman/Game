@@ -76,6 +76,17 @@ public class Wardrobe {
         return new HashSet<>(unlockedClothingIds);
     }
 
+    public void setUnlockedClothingIds(Set<String> unlockedIds) {
+        this.unlockedClothingIds.clear();
+        if (unlockedIds != null) {
+            for (String id : unlockedIds) {
+                if (id != null && !id.isEmpty()) {
+                    this.unlockedClothingIds.add(id.toLowerCase());
+                }
+            }
+        }
+    }
+
     public void unlockDefaults() {
         unlock("tshirt");
         unlock("shorts");

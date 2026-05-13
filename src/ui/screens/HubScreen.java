@@ -4,6 +4,9 @@ import combat.charms.Charm;
 import entity.EnemyManager;
 import entity.Player;
 import entity.npc.NPC;
+import entity.npc.InteractableObject;
+import entity.npc.DialogBlock;
+import entity.npc.DialogChoice;
 import combat.powers.Power;
 import combat.powers.Move;
 import ui.GamePanel;
@@ -17,6 +20,7 @@ import world.arena.arenas.HubArena;
 import world.chests.Chest;
 import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.Rectangle;
 import java.util.ArrayList;
 
 /**
@@ -52,16 +56,30 @@ public class HubScreen {
     private static final int PAUSE_MENU_MARGIN = 150;
     private GamePanel gamePanel;
 
+    /** Session admin toggle + reset save (bottom-right stack). */
+    private final Rectangle hubAdminToggleBtn = new Rectangle(1450, 788, 140, 40);
+    private final Rectangle hubResetSaveBtn = new Rectangle(1450, 838, 140, 42);
+    private boolean hubAdminToggleHovered;
+    private boolean hubResetSaveHovered;
+
     // NPCs
     private ArrayList<NPC> npcs = new ArrayList<>();
     private NPC activeNPC = null;
     private boolean inDialog = false;
     private boolean spacePressedLastFrame = false;
+
+    // Interactable Objects
+    private ArrayList<InteractableObject> interactables = new ArrayList<>();
+    private InteractableObject activeInteractable = null;
     
     // Auto-save tracking
     private long lastAutoSaveTime = 0;
     private static final long AUTO_SAVE_INTERVAL = 10000; // Auto-save every 10 seconds
     private int lastSavedKills = 0;
+
+    // Key tracking for W and S keys
+    private boolean upPressedLastFrame = false;
+    private boolean downPressedLastFrame = false;
 
     public HubScreen() {
         // No waves in hub
@@ -73,12 +91,92 @@ public class HubScreen {
     }
 
     private void initializeNPCs() {
-        // Create test NPC near center of hub
-        java.util.List<String> messages = new java.util.ArrayList<>();
-        messages.add("Welcome to the Hub! This is a safe area where you can prepare for battle.");
-        messages.add("Make sure to stock up on supplies before heading out.");
-        messages.add("Press 'E' anytime you see this indicator above an NPC to talk to them.");
-        npcs.add(new NPC(arena.getWidth() / 2 - 200, arena.getHeight() / 2 - 100, "Guide", messages));
+        int centerX = arena.getWidth() / 2;
+        int centerY = arena.getHeight() / 2;
+
+        // Guide NPC
+        java.util.List<DialogBlock> guideBlocks = new java.util.ArrayList<>();
+        guideBlocks.add(new DialogBlock("Welcome to the Hub! This is a safe area where you can prepare for battle.", null));
+        guideBlocks.add(new DialogBlock("Make sure to stock up on supplies before heading out.", null));
+        guideBlocks.add(new DialogBlock("Press 'E' anytime you see this indicator above an NPC to talk to them.", null));
+        npcs.add(new NPC(centerX - 200, centerY - 100, "Guide", guideBlocks));
+
+        // Blacksmith NPC
+        java.util.List<DialogBlock> blacksmithBlocks = new java.util.ArrayList<>();
+        java.util.List<DialogChoice> blacksmithChoices = new java.util.ArrayList<>();
+        blacksmithBlocks.add(new DialogBlock("Welcome to my shop! I have all sorts of items for sale.", blacksmithChoices));
+        blacksmithChoices.add(new DialogChoice("Chose your gear", "screen:loadout"));
+        blacksmithChoices.add(new DialogChoice("Upgrade your gear", "next"));
+        blacksmithChoices.add(new DialogChoice("Help", "next"));
+        blacksmithChoices.add(new DialogChoice("Leave", "next"));
+        npcs.add(new NPC(centerX + 200, centerY - 100, "Blacksmith", blacksmithBlocks));
+
+        // Quest Giver NPC
+        java.util.List<DialogBlock> questBlocks = new java.util.ArrayList<>();
+        java.util.List<DialogChoice> questChoices = new java.util.ArrayList<>();
+        questBlocks.add(new DialogBlock("Come to me to manage your quests.", questChoices));
+        questChoices.add(new DialogChoice("Daily Quests", "next"));
+        questChoices.add(new DialogChoice("Weekly Quests", "next"));
+        questChoices.add(new DialogChoice("Seasonal Quests", "next"));
+        questChoices.add(new DialogChoice("Milestone Quests", "next"));
+        questChoices.add(new DialogChoice("Help", "next"));
+        questChoices.add(new DialogChoice("Leave", "next"));
+        npcs.add(new NPC(centerX, centerY - 200, "Quest Giver", questBlocks));
+
+        // Shopkeeper NPC
+        java.util.List<DialogBlock> shopBlocks = new java.util.ArrayList<>();
+        java.util.List<DialogChoice> shopChoices = new java.util.ArrayList<>();
+        shopBlocks.add(new DialogBlock("Welcome to my shop! I have all sorts of items for sale.", shopChoices));
+        shopChoices.add(new DialogChoice("Enter Shop", "screen:shop"));
+        shopChoices.add(new DialogChoice("Help", "next"));
+        shopChoices.add(new DialogChoice("Leave", "next"));
+        npcs.add(new NPC(centerX, centerY + 200, "Shopkeeper", shopBlocks));
+
+        // Crafting NPC
+        java.util.List<DialogBlock> crafterBlocks = new java.util.ArrayList<>();
+        java.util.List<DialogChoice> crafterChoices = new java.util.ArrayList<>();
+        crafterBlocks.add(new DialogBlock("Need a fusion? I can turn old gear into new power.", crafterChoices));
+        crafterChoices.add(new DialogChoice("Open Crafting", "screen:crafting"));
+        crafterChoices.add(new DialogChoice("Leave", "next"));
+        npcs.add(new NPC(centerX + 280, centerY + 110, "Artificer", crafterBlocks));
+
+        // Interactable Objects
+        // Skill Tree
+        java.util.List<DialogBlock> skillTreeBlocks = new java.util.ArrayList<>();
+        java.util.List<DialogChoice> skillTreeChoices = new java.util.ArrayList<>();
+        skillTreeBlocks.add(new DialogBlock("Enter here to unlock upgrades for your character.", skillTreeChoices));
+        skillTreeChoices.add(new DialogChoice("Enter", "next"));
+        skillTreeChoices.add(new DialogChoice("Help", "next"));
+        skillTreeChoices.add(new DialogChoice("Leave", "next"));
+        interactables.add(new InteractableObject(centerX - 300, centerY, "Skill Tree", null, skillTreeBlocks));
+
+        interactables.add(new InteractableObject(centerX + 300, centerY, "Your Home", null, java.util.List.of()));
+        
+        // Portal to Arena Selection
+        java.util.List<DialogBlock> portalBlocks = new java.util.ArrayList<>();
+        java.util.List<DialogChoice> portalChoices = new java.util.ArrayList<>();
+        portalBlocks.add(new DialogBlock("The portal glows ominously. Step through to enter an arena.", portalChoices));
+        portalChoices.add(new DialogChoice("Enter", "screen:arenaselection"));
+        portalChoices.add(new DialogChoice("Leave", "next"));
+        interactables.add(new InteractableObject(centerX, centerY + 300, "Portal", null, portalBlocks));
+
+        // Locker
+        java.util.List<DialogBlock> lockerBlocks = new java.util.ArrayList<>();
+        java.util.List<DialogChoice> lockerChoices = new java.util.ArrayList<>();
+        lockerBlocks.add(new DialogBlock("Enter here to change your appearance.", lockerChoices));
+        lockerChoices.add(new DialogChoice("Enter", "next"));
+        lockerChoices.add(new DialogChoice("Help", "next"));
+        lockerChoices.add(new DialogChoice("Leave", "next"));
+        interactables.add(new InteractableObject(centerX - 400, centerY, "Locker", null, lockerBlocks));
+
+        // Crafting Station
+        java.util.List<DialogBlock> craftingBlocks = new java.util.ArrayList<>();
+        java.util.List<DialogChoice> craftingChoices = new java.util.ArrayList<>();
+        craftingBlocks.add(new DialogBlock("Enter here to craft and merge items.", craftingChoices));
+        craftingChoices.add(new DialogChoice("Enter", "screen:crafting"));
+        craftingChoices.add(new DialogChoice("Help", "next"));
+        craftingChoices.add(new DialogChoice("Leave", "next"));
+        interactables.add(new InteractableObject(centerX + 400, centerY, "Crafting Station", null, craftingBlocks));
     }
 
     public void resetMouseClicks(MouseHandler mouse) {
@@ -92,6 +190,12 @@ public class HubScreen {
             npc.setInRange(inRange);
         }
 
+        // Update InteractableObject in-range status
+        for (InteractableObject obj : interactables) {
+            boolean inRange = obj.isInRange(player.getCenterX(), player.getCenterY());
+            obj.setInRange(inRange);
+        }
+
         // Check for dialog advance with Space or E
         boolean eJustPressed = key.ePressed && !ePressedLastFrame;
         boolean spaceJustPressed = key.spacePressed && !spacePressedLastFrame;
@@ -99,7 +203,10 @@ public class HubScreen {
         // If currently in dialog, handle dialog progression
         if (inDialog && activeNPC != null) {
             if (eJustPressed || spaceJustPressed) {
-                activeNPC.advanceDialog();
+                String action = activeNPC.advanceDialog();
+                if (action != null && action.startsWith("screen:")) {
+                    gamePanel.switchScreen(action.substring(7));
+                }
                 if (!activeNPC.isShowingDialog()) {
                     // Dialog finished
                     inDialog = false;
@@ -107,9 +214,53 @@ public class HubScreen {
                 }
             }
 
+            // Handle choice cycling with W and S keys
+            boolean wJustPressed = key.upPressed && !upPressedLastFrame;
+            if (wJustPressed) {
+                activeNPC.cycleChoiceUp();
+            }
+            boolean sJustPressed = key.downPressed && !downPressedLastFrame;
+            if (sJustPressed) {
+                activeNPC.cycleChoiceDown();
+            }
+
             // Update key state tracking
             ePressedLastFrame = key.ePressed;
             spacePressedLastFrame = key.spacePressed;
+            upPressedLastFrame = key.upPressed;
+            downPressedLastFrame = key.downPressed;
+            return;
+        }
+
+        // Handle dialog for interactable objects
+        if (inDialog && activeInteractable != null) {
+            if (eJustPressed || spaceJustPressed) {
+                String action = activeInteractable.advanceDialog();
+                if (action != null && action.startsWith("screen:")) {
+                    gamePanel.switchScreen(action.substring(7));
+                }
+                if (!activeInteractable.isShowingDialog()) {
+                    // Dialog finished
+                    inDialog = false;
+                    activeInteractable = null;
+                }
+            }
+
+            // Handle choice cycling with W and S keys
+            boolean wJustPressed = key.upPressed && !upPressedLastFrame;
+            if (wJustPressed) {
+                activeInteractable.cycleChoiceUp();
+            }
+            boolean sJustPressed = key.downPressed && !downPressedLastFrame;
+            if (sJustPressed) {
+                activeInteractable.cycleChoiceDown();
+            }
+
+            // Update key state tracking
+            ePressedLastFrame = key.ePressed;
+            spacePressedLastFrame = key.spacePressed;
+            upPressedLastFrame = key.upPressed;
+            downPressedLastFrame = key.downPressed;
             return;
         }
 
@@ -117,10 +268,32 @@ public class HubScreen {
         if (eJustPressed) {
             for (NPC npc : npcs) {
                 if (npc.isInRange(player.getCenterX(), player.getCenterY())) {
-                    activeNPC = npc;
-                    activeNPC.startDialog();
-                    inDialog = true;
+                    if (npc.getScreenName() != null) {
+                        // Switch to screen instead of dialog
+                        gamePanel.switchScreen(npc.getScreenName());
+                    } else {
+                        activeNPC = npc;
+                        activeNPC.startDialog();
+                        inDialog = true;
+                    }
                     break;
+                }
+            }
+
+            // Check for InteractableObject interaction
+            if (!inDialog) {
+                for (InteractableObject obj : interactables) {
+                    if (obj.isInRange(player.getCenterX(), player.getCenterY())) {
+                        String screen = obj.getScreenName();
+                        if (screen != null && gamePanel != null) {
+                            gamePanel.switchScreen(screen);
+                        } else {
+                            activeInteractable = obj;
+                            activeInteractable.startDialog();
+                            inDialog = true;
+                        }
+                        break;
+                    }
                 }
             }
         }
@@ -133,6 +306,11 @@ public class HubScreen {
     public void update(KeyHandler key, MouseHandler mouse, int screenWidth, int screenHeight) {
         int arenaWidth  = arena.getWidth();
         int arenaHeight = arena.getHeight();
+
+        lastMouseX = mouse.mouseX;
+        lastMouseY = mouse.mouseY;
+        hubAdminToggleHovered = hubAdminToggleBtn.contains(lastMouseX, lastMouseY);
+        hubResetSaveHovered = hubResetSaveBtn.contains(lastMouseX, lastMouseY);
 
         // Handle pause with P key
         if (key.pPressed && !pPressedLastFrame) {
@@ -179,10 +357,6 @@ public class HubScreen {
         threePressedLastFrame = key.threePressed;
         fourPressedLastFrame = key.fourPressed;
 
-        // Store mouse position for draw method
-        lastMouseX = mouse.mouseX;
-        lastMouseY = mouse.mouseY;
-
         // Update inventory hover
         if (inventoryOpen) {
             int playerScreenX = player.getCenterX() - camera.x;
@@ -197,26 +371,29 @@ public class HubScreen {
         // Handle mouse drag and drop
         handleDragAndDrop(mouse.leftPressed, mouse.leftClicked, mouse.mouseX, mouse.mouseY, screenWidth, screenHeight);
 
-        // Handle player movement
-        int newX = player.getX();
-        int newY = player.getY();
-        int speed = (int) player.getSpeed();
+        if (!inDialog) {
+            // Handle player movement
+            // Calculate intended movement
+            int newX = player.getX();
+            int newY = player.getY();
+            int speed = (int) (player.getSpeed() * 0.5); // Reduce speed in hub to match arena feel
 
-        if (key.upPressed)    newY -= speed;
-        if (key.downPressed)  newY += speed;
-        if (key.leftPressed)  newX -= speed;
-        if (key.rightPressed) newX += speed;
+            if (key.upPressed)    newY -= speed;
+            if (key.downPressed)  newY += speed;
+            if (key.leftPressed)  newX -= speed;
+            if (key.rightPressed) newX += speed;
 
-        // Clamp to arena bounds
-        newX = Math.max(0, Math.min(newX, arenaWidth - player.getW()));
-        newY = Math.max(0, Math.min(newY, arenaHeight - player.getL()));
+            // Clamp to arena bounds
+            newX = Math.max(0, Math.min(newX, arenaWidth - player.getW()));
+            newY = Math.max(0, Math.min(newY, arenaHeight - player.getL()));
 
-        player.setX(newX);
-        player.setY(newY);
+            player.setX(newX);
+            player.setY(newY);
 
-        // Use the shared shooting mechanics method
-        player.handleShootingMechanics(mouse, key, inventoryOpen || draggedItem != null, null, arenaWidth, arenaHeight);
-
+            // Use the shared shooting mechanics method
+            player.handleShootingMechanics(mouse, key, inventoryOpen || draggedItem != null, null, arenaWidth, arenaHeight);
+        }
+        
         camera.follow(player.getX(), player.getY(), player.getW(), player.getL(), screenWidth, screenHeight, arenaWidth, arenaHeight);
         player.setCameraOffset(camera.x, camera.y);
         player.aimBarrel(mouse.mouseX + camera.x, mouse.mouseY + camera.y);
@@ -254,12 +431,24 @@ public class HubScreen {
             npc.draw(g, camera.x, camera.y);
         }
 
+        // Draw InteractableObjects
+        for (InteractableObject obj : interactables) {
+            obj.draw(g, camera.x, camera.y);
+        }
+
         player.draw(g, camera.x, camera.y);
 
         // Draw NPC dialogs (after player so dialog appears on top)
         for (NPC npc : npcs) {
             if (npc.isShowingDialog()) {
                 npc.drawDialog(g, camera.x, camera.y);
+            }
+        }
+
+        // Draw InteractableObject dialogs
+        for (InteractableObject obj : interactables) {
+            if (obj.isShowingDialog()) {
+                obj.drawDialog(g, camera.x, camera.y);
             }
         }
 
@@ -302,6 +491,8 @@ public class HubScreen {
         java.awt.FontMetrics fm = g.getFontMetrics();
         int textWidth = fm.stringWidth(debugStatus);
         g.drawString(debugStatus, screenWidth - textWidth - 10, 20);
+
+        drawHubDevButtons(g);
 
         // Draw pause menu if paused
         if (paused) {
@@ -603,6 +794,50 @@ public class HubScreen {
         int instructionsX = menuX + (menuWidth - instructionsWidth) / 2;
         int instructionsY = menuY + menuHeight - 40;
         g.drawString(instructions, instructionsX, instructionsY);
+    }
+
+    private void drawHubDevButtons(Graphics2D g) {
+        boolean adminOn = gamePanel != null && gamePanel.isSessionAdminMode();
+        Color adminFill = hubAdminToggleHovered
+                ? (adminOn ? new Color(90, 170, 120) : new Color(210, 130, 55))
+                : (adminOn ? new Color(60, 130, 85) : new Color(145, 88, 32));
+        g.setColor(adminFill);
+        g.fillRoundRect(hubAdminToggleBtn.x, hubAdminToggleBtn.y, hubAdminToggleBtn.width, hubAdminToggleBtn.height, 8, 8);
+        g.setColor(new Color(40, 38, 36));
+        g.setStroke(new java.awt.BasicStroke(1.5f));
+        g.drawRoundRect(hubAdminToggleBtn.x, hubAdminToggleBtn.y, hubAdminToggleBtn.width, hubAdminToggleBtn.height, 8, 8);
+        g.setStroke(new java.awt.BasicStroke(1f));
+        g.setColor(Color.WHITE);
+        g.setFont(new java.awt.Font("Segoe UI", java.awt.Font.BOLD, 12));
+        String adminLabel = adminOn ? "Admin: ON" : "Admin: OFF";
+        g.drawString(adminLabel, hubAdminToggleBtn.x + 18, hubAdminToggleBtn.y + 26);
+
+        Color resetFill = hubResetSaveHovered ? new Color(200, 70, 70) : new Color(150, 45, 45);
+        g.setColor(resetFill);
+        g.fillRoundRect(hubResetSaveBtn.x, hubResetSaveBtn.y, hubResetSaveBtn.width, hubResetSaveBtn.height, 8, 8);
+        g.setColor(new Color(40, 38, 36));
+        g.setStroke(new java.awt.BasicStroke(1.5f));
+        g.drawRoundRect(hubResetSaveBtn.x, hubResetSaveBtn.y, hubResetSaveBtn.width, hubResetSaveBtn.height, 8, 8);
+        g.setStroke(new java.awt.BasicStroke(1f));
+        g.setColor(Color.WHITE);
+        g.setFont(new java.awt.Font("Segoe UI", java.awt.Font.BOLD, 13));
+        g.drawString("RESET SAVE", hubResetSaveBtn.x + 14, hubResetSaveBtn.y + 27);
+    }
+
+    public boolean isPaused() {
+        return paused;
+    }
+
+    public void handleHubDevClick(int mouseX, int mouseY, int screenWidth, int screenHeight) {
+        if (paused) return;
+        if (gamePanel == null) return;
+        if (hubAdminToggleBtn.contains(mouseX, mouseY)) {
+            gamePanel.toggleSessionAdminMode();
+            return;
+        }
+        if (hubResetSaveBtn.contains(mouseX, mouseY)) {
+            gamePanel.resetSaveAndRelaunch();
+        }
     }
 
     private void drawPauseButton(Graphics2D g, String text, int x, int y, int width, int height) {

@@ -12,18 +12,32 @@ import ui.InventoryScreen;
 import util.Camera;
 import util.KeyHandler;
 import util.MouseHandler;
-import world.arena.arenas.ArenaTest;
+import world.arena.arenas.PlainsI;
+import world.arena.arenas.StandardArena;
+import world.arena.arenas.PlainsII;
+import world.arena.arenas.PlainsIII;
+import world.arena.arenas.PlainsIV;
+import world.arena.arenas.PlainsV;
 import world.arena.WaveManager;
 import world.chests.ArenaChest;
 import world.chests.Chest;
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.Graphics2D;
+import java.awt.Rectangle;
 import java.util.ArrayList;
+import java.util.HashSet;
+
+import save.ArenaProgressionManager;
+import save.SaveData;
+import save.SaveManager;
 
 public class GameScreen {
 
-    ArenaTest arena = new ArenaTest();
+    StandardArena arena = new PlainsI();
+    private String selectedArenaName = "PlainsI";
     Player player = new Player(arena.getWidth() / 2, arena.getHeight() / 2);
     Camera camera = new Camera();
     HUD hud = new HUD();
@@ -53,6 +67,20 @@ public class GameScreen {
     private boolean pPressedLastFrame = false;
     private static final int PAUSE_MENU_MARGIN = 150;
     private GamePanel gamePanel;
+
+    /** Full clear overlay after beating all arena waves. */
+    private boolean arenaRunCompleteOverlay = false;
+    private int arenaRunCompleteKills = 0;
+    private double arenaRunCompleteDamage = 0;
+    private int arenaRunCompleteWaves = 10;
+    private int arenaRunCompleteCash = 0;
+    private Rectangle arenaRunCompleteContinueBtn = new Rectangle();
+    private Rectangle arenaRunCompleteNextArenaBtn = new Rectangle();
+    private int overlayMouseX;
+    private int overlayMouseY;
+    private boolean enterPressedLastFrame = false;
+    private boolean spacePressedLastFrame = false;
+    private boolean skipToWave10LPressedLast = false;
     
     // Auto-save tracking
     private long lastAutoSaveTime = 0;
@@ -61,6 +89,7 @@ public class GameScreen {
 
     public GameScreen() {
         waveManager = new WaveManager(enemyManager, player, arena.getWidth(), arena.getHeight());
+        waveManager.setCurrentArena(arena);
         waveManager.setEnabled(wavesEnabled);
 
         // Chests spawn via waves
@@ -69,9 +98,51 @@ public class GameScreen {
     public GameScreen(GamePanel gamePanel) {
         this.gamePanel = gamePanel;
         waveManager = new WaveManager(enemyManager, player, arena.getWidth(), arena.getHeight());
+        waveManager.setCurrentArena(arena);
         waveManager.setEnabled(wavesEnabled);
 
         // Chests spawn via waves
+    }
+    
+    /**
+     * Set the arena to play by name
+     */
+    public void setArena(String arenaName) {
+        this.selectedArenaName = arenaName;
+        
+        // Create appropriate arena based on name
+        switch (arenaName) {
+            case "PlainsI" -> arena = new PlainsI();
+            case "PlainsII" -> arena = new PlainsII();
+            case "PlainsIII" -> arena = new PlainsIII();
+            case "PlainsIV" -> arena = new PlainsIV();
+            case "PlainsV" -> arena = new PlainsV();
+            default -> arena = new PlainsI();
+        }
+        
+        // Reset player position and state
+        player.setX(arena.getWidth() / 2);
+        player.setY(arena.getHeight() / 2);
+        player.playerSpawn();
+        player.getProjectiles().clear();
+        
+        // Reset managers
+        enemyManager.clear();
+        waveManager = new WaveManager(enemyManager, player, arena.getWidth(), arena.getHeight());
+        waveManager.setCurrentArena(arena);
+        waveManager.setEnabled(wavesEnabled);
+        
+        // Reset state
+        chests.clear();
+        activeChest = null;
+        inventoryOpen = false;
+        draggedItem = null;
+        camera.x = 0;
+        camera.y = 0;
+        arenaRunCompleteOverlay = false;
+        enterPressedLastFrame = false;
+        spacePressedLastFrame = false;
+        skipToWave10LPressedLast = false;
     }
 
     public void resetMouseClicks(MouseHandler mouse) {
@@ -87,6 +158,7 @@ public class GameScreen {
 
         // Reset wave manager
         waveManager = new WaveManager(enemyManager, player, arena.getWidth(), arena.getHeight());
+        waveManager.setCurrentArena(arena);
         waveManager.setEnabled(wavesEnabled);
 
         // Reset enemy manager
@@ -104,6 +176,10 @@ public class GameScreen {
 
         // Reset pause state
         paused = false;
+        arenaRunCompleteOverlay = false;
+        enterPressedLastFrame = false;
+        spacePressedLastFrame = false;
+        skipToWave10LPressedLast = false;
 
         // Reset camera
         camera.x = 0;
@@ -125,8 +201,8 @@ public class GameScreen {
         int arenaWidth  = arena.getWidth();
         int arenaHeight = arena.getHeight();
 
-        // Handle pause with P key
-        if (key.pPressed && !pPressedLastFrame) {
+        // Handle pause with P key (disabled while arena clear overlay is open)
+        if (key.pPressed && !pPressedLastFrame && !arenaRunCompleteOverlay) {
             paused = !paused;
         }
         pPressedLastFrame = key.pPressed;
@@ -134,6 +210,30 @@ public class GameScreen {
         // If paused, skip all update logic
         if (paused) {
             return;
+        }
+
+        // All waves cleared — modal blocks gameplay (same dim style as shop purchase modal)
+        if (arenaRunCompleteOverlay) {
+            updateArenaRunCompleteOverlay(key, mouse, screenWidth, screenHeight);
+            return;
+        }
+
+        // Dev: L jumps to wave 10 while run is in progress (testing)
+        if (wavesEnabled) {
+            boolean lEdge = key.lPressed && !skipToWave10LPressedLast;
+            skipToWave10LPressedLast = key.lPressed;
+            if (lEdge && waveManager.getCurrentWave() < waveManager.getMaxWaves()) {
+                enemyManager.killAllEnemies();
+                chests.clear();
+                activeChest = null;
+                inventoryOpen = false;
+                player.getProjectiles().clear();
+                waveManager.forceBeginWave(10);
+                key.lPressed = false;
+                skipToWave10LPressedLast = false;
+            }
+        } else {
+            skipToWave10LPressedLast = key.lPressed;
         }
 
         // Toggle debug mode with O key
@@ -271,7 +371,7 @@ public class GameScreen {
                     }
                 }
             }
-        }, arenaWidth, arenaHeight);
+        }, arenaWidth, arenaHeight, arena.getObstacles());
 
         camera.follow(player.getX(), player.getY(), player.getW(), player.getL(), screenWidth, screenHeight, arenaWidth, arenaHeight);
         player.setCameraOffset(camera.x, camera.y);
@@ -282,9 +382,9 @@ public class GameScreen {
             checkMeleeCollisions(player, enemyManager);
         }
         player.checkProjectileCollisions(enemyManager);
-        enemyManager.update(player, arenaWidth, arenaHeight);
-        enemyManager.updateBoss(player, arenaWidth, arenaHeight);
-        enemyManager.checkEnemyProjectileCollisions(player);
+        enemyManager.update(player, arenaWidth, arenaHeight, arena.getObstacles());
+        enemyManager.updateBoss(player, arenaWidth, arenaHeight, arena.getObstacles());
+        enemyManager.checkEnemyProjectileCollisions(player, arena.getObstacles());
 
         // Check boss melee collision
         if (player.getHeldWeapon() instanceof combat.Melee) {
@@ -312,6 +412,10 @@ public class GameScreen {
                 newState == WaveManager.WaveState.ACTIVE) {
                 chests.clear();
                 activeChest = null;
+            }
+
+            if (!arenaRunCompleteOverlay && waveManager.isArenaRunFullyComplete()) {
+                openArenaRunCompleteOverlay();
             }
         }
 
@@ -456,32 +560,38 @@ public class GameScreen {
 
         // Draw stats panel if visible (bottom left corner)
         if (statsPanelVisible) {
-            drawStatsPanel(g, 10, screenHeight - 190);
+            drawStatsPanel(g, 10, screenHeight - 210);
         }
 
         // Draw pause menu if paused
         if (paused) {
             drawPauseMenu(g, screenWidth, screenHeight);
         }
+
+        if (arenaRunCompleteOverlay) {
+            drawArenaRunCompleteOverlay(g, screenWidth, screenHeight);
+        }
     }
 
     private void drawStatsPanel(Graphics2D g, int x, int y) {
         entity.PlayerStats stats = player.getStats();
 
-        // Calculate multipliers
-        int charmCount = 0;
+        double charmHpFrac = 0;
+        double charmSpeedFrac = 0;
+        double charmDamageFrac = 0;
         for (int i = 0; i < player.getInventory().getMaxCharms(); i++) {
-            if (player.getInventory().getCharm(i) != null) {
-                charmCount++;
+            Charm c = player.getInventory().getCharm(i);
+            if (c != null) {
+                charmHpFrac += c.getMaxHpBonusFraction();
+                charmSpeedFrac += c.getSpeedBonusFraction();
+                charmDamageFrac += c.getDamageBonusFraction();
             }
         }
-        int hpMultiplier = charmCount * 10; // Each charm gives 10%
-        // Calculate level-based multipliers (level 1 = base)
+        int hpCharmPct = (int) Math.round(charmHpFrac * 100);
+        int speedCharmPct = (int) Math.round(charmSpeedFrac * 100);
+        int damageCharmPct = (int) Math.round(charmDamageFrac * 100);
+
         int playerLevel = player.getPlayerLevel();
-        double damageFromLevel = (playerLevel - 1) * 0.05;
-        double speedFromLevel = (playerLevel - 1) * 0.2;
-        double totalDamageMultiplier = (player.getDamage() - 1.0) * 100;
-        double totalSpeedMultiplier = ((player.getSpeed() - 7.0) / 7.0) * 100;
 
         // Panel background
         int panelWidth = 200;
@@ -500,13 +610,13 @@ public class GameScreen {
         int lineY = y + 40;
         int lineHeight = 16;
 
-        g.drawString("Base HP: " + (int)(200 + (playerLevel - 1) * 20), x + 10, lineY);
+        g.drawString("Base HP: " + (int) player.getBaseMaxHp(), x + 10, lineY);
         lineY += lineHeight;
-        g.drawString("HP Multiplier: +" + hpMultiplier + "%", x + 10, lineY);
+        g.drawString("Charm HP: +" + hpCharmPct + "%", x + 10, lineY);
         lineY += lineHeight;
-        g.drawString("Damage Multiplier: +" + (int)totalDamageMultiplier + "%", x + 10, lineY);
+        g.drawString("Charm Dmg: +" + damageCharmPct + "%", x + 10, lineY);
         lineY += lineHeight;
-        g.drawString("Speed Multiplier: +" + (int)totalSpeedMultiplier + "%", x + 10, lineY);
+        g.drawString("Charm Spd: +" + speedCharmPct + "%", x + 10, lineY);
         lineY += lineHeight;
         g.drawString("---", x + 10, lineY);
         lineY += lineHeight;
@@ -1178,6 +1288,239 @@ public class GameScreen {
         int textX = x + (width - textWidth) / 2;
         int textY = y + (height + textHeight) / 2 - 5;
         g.drawString(text, textX, textY);
+    }
+
+    private int computeArenaRunCashReward(int kills, int wavesSurvived, double damageDealt) {
+        int fromWaves = 35 * wavesSurvived;
+        int fromKills = 12 * kills;
+        int fromDamage = (int) (damageDealt / 40.0);
+        return Math.max(150, fromWaves + fromKills + fromDamage);
+    }
+
+    private void grantArenaRunCashReward() {
+        if (gamePanel == null) {
+            return;
+        }
+        gamePanel.getCurrencyManager().addCash(arenaRunCompleteCash);
+        SaveData data = SaveManager.load();
+        data.setCash(gamePanel.getCurrencyManager().getCash().getAmount());
+        SaveManager.save(data);
+    }
+
+    /** Marks the current arena cleared and unlocks the next; safe to call once per victory. */
+    private void persistArenaRunVictoryProgression() {
+        SaveData d = SaveManager.load();
+        ArenaProgressionManager pm = new ArenaProgressionManager();
+        pm.setUnlockedArenas(new HashSet<>(d.getUnlockedArenas()));
+        pm.setLastCompletedArena(d.getLastCompletedArena());
+        pm.completeArena(selectedArenaName);
+        d.setUnlockedArenas(pm.getUnlockedArenas());
+        d.setLastCompletedArena(pm.getLastCompletedArena());
+        if (d.getPlayerLevel() <= 0) {
+            d.setSkillPoints(0);
+        }
+        SaveManager.save(d);
+    }
+
+    private void openArenaRunCompleteOverlay() {
+        if (arenaRunCompleteOverlay) {
+            return;
+        }
+        if (!waveManager.isArenaRunFullyComplete()) {
+            return;
+        }
+        arenaRunCompleteKills = player.getStats().getKills();
+        arenaRunCompleteDamage = player.getStats().getDamageDealt();
+        arenaRunCompleteWaves = waveManager.getMaxWaves();
+        arenaRunCompleteCash = computeArenaRunCashReward(
+                arenaRunCompleteKills, arenaRunCompleteWaves, arenaRunCompleteDamage);
+        grantArenaRunCashReward();
+        persistArenaRunVictoryProgression();
+        arenaRunCompleteOverlay = true;
+        enterPressedLastFrame = true;
+        spacePressedLastFrame = true;
+        if (gamePanel != null) {
+            gamePanel.requestFocusInWindow();
+        }
+    }
+
+    /**
+     * Handles arena-clear modal clicks on the EDT (before the game tick). Returns true if the click was consumed.
+     */
+    public boolean handleArenaCompletionClick(MouseHandler mouse, int x, int y, int screenWidth, int screenHeight) {
+        if (!arenaRunCompleteOverlay) {
+            return false;
+        }
+        layoutArenaRunCompleteOverlayButtons(screenWidth, screenHeight);
+        overlayMouseX = x;
+        overlayMouseY = y;
+        if (!mouse.leftClicked) {
+            return false;
+        }
+        mouse.leftClicked = false;
+        if (arenaRunCompleteContinueBtn.contains(x, y)) {
+            closeArenaRunCompleteToHub();
+            return true;
+        }
+        if (arenaRunCompleteNextArenaBtn.contains(x, y)) {
+            closeArenaRunCompleteGoNextArena();
+            return true;
+        }
+        return true;
+    }
+
+    private static final int ARENA_COMPLETE_MODAL_W = 720;
+    private static final int ARENA_COMPLETE_MODAL_H = 460;
+
+    /** Button bounds must be set before {@link #updateArenaRunCompleteOverlay}; draw reuses the same layout. */
+    private void layoutArenaRunCompleteOverlayButtons(int screenWidth, int screenHeight) {
+        int mh = ARENA_COMPLETE_MODAL_H;
+        int my = (screenHeight - mh) / 2;
+        int btnW = 300;
+        int btnH = 48;
+        int gap = 20;
+        int btnY = my + mh - btnH * 2 - gap - 36;
+        int rowX = (screenWidth - btnW) / 2;
+        arenaRunCompleteContinueBtn.setBounds(rowX, btnY, btnW, btnH);
+        arenaRunCompleteNextArenaBtn.setBounds(rowX, btnY + btnH + gap, btnW, btnH);
+    }
+
+    private void updateArenaRunCompleteOverlay(KeyHandler key, MouseHandler mouse, int screenWidth, int screenHeight) {
+        layoutArenaRunCompleteOverlayButtons(screenWidth, screenHeight);
+        overlayMouseX = mouse.mouseX;
+        overlayMouseY = mouse.mouseY;
+
+        boolean continueEdge = (key.enterPressed && !enterPressedLastFrame)
+                || (key.spacePressed && !spacePressedLastFrame);
+        enterPressedLastFrame = key.enterPressed;
+        spacePressedLastFrame = key.spacePressed;
+
+        if (mouse.leftClicked) {
+            if (arenaRunCompleteContinueBtn.contains(mouse.mouseX, mouse.mouseY)) {
+                mouse.leftClicked = false;
+                closeArenaRunCompleteToHub();
+                return;
+            }
+            if (arenaRunCompleteNextArenaBtn.contains(mouse.mouseX, mouse.mouseY)) {
+                mouse.leftClicked = false;
+                closeArenaRunCompleteGoNextArena();
+                return;
+            }
+            mouse.leftClicked = false;
+        }
+        if (continueEdge) {
+            if (arenaIdAfter(selectedArenaName) != null) {
+                closeArenaRunCompleteGoNextArena();
+            } else {
+                closeArenaRunCompleteToHub();
+            }
+            return;
+        }
+    }
+
+    private void closeArenaRunCompleteToHub() {
+        arenaRunCompleteOverlay = false;
+        if (gamePanel != null) {
+            SaveManager.syncPlayerStats(player.getStats(), waveManager.getCurrentWave(), 1);
+            gamePanel.switchScreen("hub");
+        }
+    }
+
+    private void closeArenaRunCompleteGoNextArena() {
+        arenaRunCompleteOverlay = false;
+        if (gamePanel != null) {
+            gamePanel.getKeyHandler().lPressed = false;
+        }
+        if (gamePanel == null) {
+            return;
+        }
+        SaveManager.syncPlayerStats(player.getStats(), waveManager.getCurrentWave(), 1);
+        SaveData d = SaveManager.load();
+        ArenaProgressionManager pm = new ArenaProgressionManager();
+        pm.setUnlockedArenas(new HashSet<>(d.getUnlockedArenas()));
+
+        String next = arenaIdAfter(selectedArenaName);
+        if (next != null && pm.isUnlocked(next)) {
+            setArena(next);
+            resetGame();
+            resetMouseClicks(gamePanel.getMouseHandler());
+            gamePanel.requestFocusInWindow();
+        } else {
+            gamePanel.switchScreen("hub");
+        }
+    }
+
+    private static String arenaIdAfter(String current) {
+        String[] all = ArenaProgressionManager.getAllArenas();
+        for (int i = 0; i < all.length; i++) {
+            if (all[i].equals(current) && i + 1 < all.length) {
+                return all[i + 1];
+            }
+        }
+        return null;
+    }
+
+    private void drawArenaRunCompleteOverlay(Graphics2D g, int screenWidth, int screenHeight) {
+        g.setColor(new Color(0, 0, 0, 160));
+        g.fillRect(0, 0, screenWidth, screenHeight);
+
+        int mw = ARENA_COMPLETE_MODAL_W;
+        int mh = ARENA_COMPLETE_MODAL_H;
+        int mx = (screenWidth - mw) / 2;
+        int my = (screenHeight - mh) / 2;
+
+        g.setColor(new Color(20, 22, 30, 238));
+        g.fillRoundRect(mx, my, mw, mh, 18, 18);
+        g.setColor(new Color(120, 200, 255));
+        g.setStroke(new BasicStroke(3));
+        g.drawRoundRect(mx, my, mw, mh, 18, 18);
+        g.setStroke(new BasicStroke(1));
+
+        g.setColor(Color.WHITE);
+        g.setFont(new Font("Segoe UI", Font.BOLD, 34));
+        g.drawString("Arena cleared", mx + 28, my + 52);
+
+        g.setColor(new Color(190, 200, 220));
+        g.setFont(new Font("Segoe UI", Font.PLAIN, 20));
+        int lineY = my + 100;
+        g.drawString("Kills: " + arenaRunCompleteKills, mx + 36, lineY);
+        lineY += 36;
+        g.drawString("Damage dealt: " + String.format("%,.0f", arenaRunCompleteDamage), mx + 36, lineY);
+        lineY += 36;
+        g.drawString("Waves survived: " + arenaRunCompleteWaves, mx + 36, lineY);
+        lineY += 36;
+        g.setColor(new Color(120, 230, 160));
+        g.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        g.drawString("Cash earned: $" + arenaRunCompleteCash, mx + 36, lineY);
+        lineY += 44;
+        g.setColor(new Color(160, 170, 190));
+        g.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+        g.drawString("Reward is based on kills, total damage, and waves cleared.", mx + 36, lineY);
+
+        layoutArenaRunCompleteOverlayButtons(screenWidth, screenHeight);
+        boolean h1 = arenaRunCompleteContinueBtn.contains(overlayMouseX, overlayMouseY);
+        String nextId = arenaIdAfter(selectedArenaName);
+        String hubLabel = nextId != null ? "Return to Hub" : "Return to Hub (Enter)";
+        drawOverlayChoiceButton(g, arenaRunCompleteContinueBtn, hubLabel, h1);
+
+        boolean h2 = arenaRunCompleteNextArenaBtn.contains(overlayMouseX, overlayMouseY);
+        String nextLabel = nextId != null ? "Next Arena (Enter)" : "Continue";
+        drawOverlayChoiceButton(g, arenaRunCompleteNextArenaBtn, nextLabel, h2);
+    }
+
+    private void drawOverlayChoiceButton(Graphics2D g, Rectangle r, String label, boolean hover) {
+        Color fill = hover ? new Color(90, 110, 160, 230) : new Color(60, 70, 95, 220);
+        g.setColor(fill);
+        g.fillRoundRect(r.x, r.y, r.width, r.height, 10, 10);
+        g.setColor(Color.WHITE);
+        g.setStroke(new BasicStroke(2));
+        g.drawRoundRect(r.x, r.y, r.width, r.height, 10, 10);
+        g.setStroke(new BasicStroke(1));
+        g.setFont(new Font("Segoe UI", Font.BOLD, 17));
+        FontMetrics fm = g.getFontMetrics();
+        int tx = r.x + (r.width - fm.stringWidth(label)) / 2;
+        int ty = r.y + (r.height + fm.getAscent()) / 2 - 4;
+        g.drawString(label, tx, ty);
     }
 
     public void handlePauseMenuClick(int mouseX, int mouseY, int screenWidth, int screenHeight) {
