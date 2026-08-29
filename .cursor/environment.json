@@ -1,0 +1,4 @@
+{
+  "name": "Abyss",
+  "install": "javac -version && java -version"
+}
