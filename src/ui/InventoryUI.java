@@ -90,7 +90,7 @@ public class InventoryUI {
             return iconCache.get(iconPath);
         }
         try {
-            BufferedImage img = ImageIO.read(new File(iconPath));
+            BufferedImage img = ImageIO.read(util.Assets.file(iconPath));
             iconCache.put(iconPath, img);
             return img;
         } catch (IOException e) {
