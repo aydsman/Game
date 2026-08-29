@@ -12,8 +12,6 @@ public class Enemy extends Entity {
     private long lastShotTime = 0;
     protected int detectionRadius = 300; // pixels
     private boolean debugMode = false;
-    protected int xpValue = 25; // XP given when killed
-    protected int goldValue = 10; // Gold given when killed
 
     public Enemy(int x, int y) {
         super(x, y);
@@ -27,18 +25,18 @@ public class Enemy extends Entity {
         ranged = true;
         // visuals
         color = Color.WHITE;
-        // XP value
-        xpValue = 25; // XP given when killed
-        // Gold value
-        goldValue = 10; // Gold given when killed
+        setXpValue(25);
+        setGoldValue(10);
     }
 
+    @Override
     public int getGoldValue() {
-        return goldValue;
+        return super.getGoldValue();
     }
 
+    @Override
     public int getXpValue() {
-        return xpValue;
+        return super.getXpValue();
     }
 
     public void move(Player player, int arenaWidth, int arenaHeight) {
