@@ -16,8 +16,11 @@ public class CharacterRenderer {
         this.currentAppearance = appearance;
         cachedAssets.clear();
         try {
-            // Load test character asset
-            BufferedImage original = ImageIO.read(new File("assets/player/body/man/idle/idle_front.png"));
+            File f = new File("assets/player/body/man/idle/idle_front.png");
+            if (!f.exists()) {
+                return;
+            }
+            BufferedImage original = ImageIO.read(f);
             // Recolor based on skin color
             Color[] from = {new Color(0xBB, 0xBB, 0xBB), new Color(0xAA, 0xAA, 0xAA), new Color(0x77, 0x77, 0x77)};
             Color baseColor = skinColors[appearance.getSkinColorIndex() / 3][1]; // Base shade
