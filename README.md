@@ -438,18 +438,35 @@ Clothing shares the same 5-tier rarity system as other items. Tier affects visua
 
 ### Compile & Run
 
-    # Compile all Java files
-    javac -d out src/**/*.java
+From the project root (folder containing `assets/` and `src/`):
 
-    # Run the game
-    java -cp out Main
+**Windows (PowerShell):**
+```powershell
+.\run.ps1
+```
+
+**macOS / Linux:**
+```bash
+./run.sh
+```
+
+**Manual compile:**
+```bash
+mkdir -p out
+find src -name '*.java' > sources.txt    # PowerShell: see run.ps1
+javac -d out @sources.txt
+java -cp out Main
+```
 
 ### IDE Setup (IntelliJ IDEA)
 
-1. Open project folder
+1. Open the project folder (the one that contains `assets/` and `src/`)
 2. Mark `src/` as Sources Root
 3. Set SDK to Java 17+
 4. Run `Main.java`
+5. **Important:** In Run → Edit Configurations → Working directory, set `$PROJECT_DIR$` (not `src/` or `out/`). The game loads images from `assets/` relative to the project root.
+
+If you see hundreds of compile errors, pull the latest `master` — older commits were missing source files that are now included.
 
 ## Documentation
 

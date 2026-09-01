@@ -41,7 +41,7 @@ public class MenuScreen {
     
     private void loadMenuBackground() {
         try {
-            menuBackground = new ImageIcon("assets/background/menu/menu.gif");
+            menuBackground = new ImageIcon(util.Assets.resolve("assets/background/menu/menu.gif"));
         } catch (Exception e) {
             System.err.println("Failed to load menu background: " + e.getMessage());
         }

@@ -16,7 +16,7 @@ public class CharacterRenderer {
         this.currentAppearance = appearance;
         cachedAssets.clear();
         try {
-            File f = new File("assets/player/body/man/idle/idle_front.png");
+            File f = util.Assets.file("assets/player/body/man/idle/idle_front.png");
             if (!f.exists()) {
                 return;
             }

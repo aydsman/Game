@@ -15,6 +15,7 @@ import combat.ranged.rifles.Rifle1;
 import util.KeyHandler;
 import util.MouseHandler;
 import currency.CurrencyManager;
+import skilltree.SkillEffects;
 import java.awt.Rectangle;
 import java.util.List;
 
@@ -110,6 +111,8 @@ public class Player extends Entity {
 
         // Set player reference in inventory for charm effects
         inventory.setPlayer(this);
+
+        SkillEffects.applyToPlayer(this);
 
         System.out.println("Player spawned - Level: " + playerLevel + ", HP: " + (int)baseHp + ", Speed: " + String.format("%.1f", baseSpeed));
     }
@@ -566,7 +569,7 @@ public class Player extends Entity {
             for (entity.Enemy enemy : enemyManager.getEnemies()) {
                 if (enemy.checkCollision(p.getX(), p.getY())) {
                     enemy.takeDamage(p.getDamage());
-                    if (enemy.isDead() && !killedEnemies.contains(enemy)) {
+                    if (enemy.isDead() && enemy.claimKillReward() && !killedEnemies.contains(enemy)) {
                         killedEnemies.add(enemy);
                         stats.addKill();
                     }
@@ -724,5 +727,31 @@ public class Player extends Entity {
 
     public int getPlayerXP() {
         return playerXP;
+    }
+
+    public void setXpMultiplier(double multiplier) {
+        xpMultiplier = multiplier;
+    }
+
+    public double getXpMultiplierValue() {
+        return xpMultiplier;
+    }
+
+    /** Applies skill-tree passive bonuses to base stats (called from {@link SkillEffects}). */
+    public void applySkillBonuses(int maxHpBonus, double damageMultiplier, double speedMultiplier) {
+        if (maxHpBonus > 0) {
+            baseMaxHp += maxHpBonus;
+            baseHp += maxHpBonus;
+            maxHp = (int) baseMaxHp;
+            hp = Math.min(hp, maxHp);
+        }
+        if (damageMultiplier > 0) {
+            baseDamage *= damageMultiplier;
+            damage = baseDamage;
+        }
+        if (speedMultiplier > 0) {
+            baseSpeed *= speedMultiplier;
+            speed = baseSpeed;
+        }
     }
 }

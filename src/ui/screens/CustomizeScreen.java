@@ -752,7 +752,7 @@ public class CustomizeScreen {
                     BufferedImage icon = iconCache.get(item.getName());
                     if (icon == null) {
                         try {
-                            icon = javax.imageio.ImageIO.read(new java.io.File(item.getAssetPath()));
+                            icon = javax.imageio.ImageIO.read(util.Assets.file(item.getAssetPath()));
                             iconCache.put(item.getName(), icon);
                         } catch (Exception e) {
                             icon = null;

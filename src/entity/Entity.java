@@ -2,8 +2,12 @@ package entity;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.Rectangle;
+import java.util.List;
 import combat.Item;
 import combat.Ranged;
+import util.CombatFeedback;
+import world.arena.ArenaCollision;
 import world.arena.ArenaPathfinding;
 
 public class Entity {
@@ -17,6 +21,10 @@ public class Entity {
     protected Color color = Color.WHITE; // default color
     protected Item heldWeapon; // weapon the entity is holding (null if nothing)
     protected boolean dead = false; // death status
+    protected int xpValue = 0;
+    protected int goldValue = 0;
+    protected boolean killRewardClaimed = false;
+    protected CombatFeedback combatFeedback = new CombatFeedback();
     /** Arena pathfinding state (enemies / bosses with obstacles). */
     protected final ArenaPathfinding.PathAgentState pathAgentState = new ArenaPathfinding.PathAgentState();
 
@@ -120,7 +128,11 @@ public class Entity {
     }
 
     public void draw(Graphics2D g, int cameraX, int cameraY) {
-        g.setColor(color);
+        if (combatFeedback != null && combatFeedback.isFlashing()) {
+            g.setColor(Color.WHITE);
+        } else {
+            g.setColor(color);
+        }
         g.fillRect(x - cameraX, y - cameraY, w, l);
         if (ranged) {
             drawBarrel(g, cameraX, cameraY);
@@ -233,5 +245,61 @@ public class Entity {
         // border (black)
         g.setColor(Color.BLACK);
         g.drawRect(barX, barY, barWidth, barHeight);
+    }
+
+    public int getXpValue() {
+        return xpValue;
+    }
+
+    public int getGoldValue() {
+        return goldValue;
+    }
+
+    public void setXpValue(int value) {
+        xpValue = value;
+    }
+
+    public void setGoldValue(int value) {
+        goldValue = value;
+    }
+
+    public CombatFeedback getCombatFeedback() {
+        return combatFeedback;
+    }
+
+    public void flashHit() {
+        if (combatFeedback != null) {
+            combatFeedback.flashHit(getCenterX(), getCenterY());
+        }
+    }
+
+    public void knockBack(int fromX, int fromY, int force, List<Rectangle> obstacles, int arenaWidth, int arenaHeight) {
+        if (force <= 0 || dead) {
+            return;
+        }
+        int cx = getCenterX();
+        int cy = getCenterY();
+        double dx = cx - fromX;
+        double dy = cy - fromY;
+        double dist = Math.hypot(dx, dy);
+        if (dist < 1.0) {
+            dx = 1.0;
+            dy = 0.0;
+            dist = 1.0;
+        }
+        int newX = x + (int) Math.round((dx / dist) * force);
+        int newY = y + (int) Math.round((dy / dist) * force);
+        int[] resolved = ArenaCollision.resolveMovement(x, y, newX, newY, w, l, obstacles, arenaWidth, arenaHeight);
+        x = resolved[0];
+        y = resolved[1];
+    }
+
+    /** Marks kill rewards as claimed so XP/gold are not granted twice. */
+    public boolean claimKillReward() {
+        if (killRewardClaimed || !dead) {
+            return false;
+        }
+        killRewardClaimed = true;
+        return true;
     }
 }

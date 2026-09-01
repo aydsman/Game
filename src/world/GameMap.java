@@ -30,13 +30,13 @@ public class GameMap {
 
     private void loadTiles() {
         try {
-            BufferedImage grassImg = ImageIO.read(new File("assets/tiles/grass_tile.png"));
+            BufferedImage grassImg = ImageIO.read(util.Assets.file("assets/tiles/grass_tile.png"));
             grassTile = new Tile(grassImg);
         } catch (IOException e) {
             System.out.println("Could not load grass_tile.png");
         }
         try {
-            BufferedImage hubImg = ImageIO.read(new File("assets/tiles/hub_tile.png"));
+            BufferedImage hubImg = ImageIO.read(util.Assets.file("assets/tiles/hub_tile.png"));
             hubTile = new Tile(hubImg);
         } catch (IOException e) {
             System.out.println("Could not load hub_tile.png");
