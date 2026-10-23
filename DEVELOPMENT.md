@@ -12,6 +12,6 @@ Work and commit on `development`. Publish with `git push -u origin development`.
 
 GitHub Actions compiles and runs the tests on Windows and Linux for pushes and pull requests targeting main/development. The workflow first reaches main when the development pull request is merged.
 
-## Current build blocker
+## Recovered sources
 
-At environment setup, `src/combat/Ranged.java` and `src/entity/Boss.java` were empty. Recover their latest contents before expecting compilation or CI to pass. The setup preserves these files rather than replacing them with older committed versions.
+The two empty sources, `Ranged.java` and `Boss.java`, were recovered from Git history and adapted to the current combat interfaces. The local build and all 104 test assertions passed after recovery.
