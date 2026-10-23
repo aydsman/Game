@@ -12,7 +12,7 @@ public class Enemy7 extends MeleeEnemy { // Hammer Enemy
         // Hammer enemies: high damage, slow attacks, more health
         hp = 160;
         maxHp = 160;
-        speed = 2.8;
+        speed = 1.4;
         damage = 40.0;
         preferredDistance = 50.0; // Need room for hammer swings
         // Slower attack speed for hammers
@@ -20,5 +20,7 @@ public class Enemy7 extends MeleeEnemy { // Hammer Enemy
         maxAttackCooldown = 2.2;
         xpValue = 35;
         goldValue = 15;
+        role = entity.ai.EnemyRole.SLAMMER;
+        enableSlam();
     }
 }

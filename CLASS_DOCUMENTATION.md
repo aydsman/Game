@@ -1,8 +1,10 @@
 # Abyss Class Documentation
 
-**Total Classes:** 112
+**Total type declarations:** 260 (classes, interfaces, enums, and nested types)
 
-**Total Lines of Code:** 9,000+
+**Java source files:** 242
+
+**Total lines of code:** 23,850 (all lines in `src/**/*.java`)
 
 ## Table of Contents
 

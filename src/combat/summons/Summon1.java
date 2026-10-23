@@ -9,6 +9,10 @@ public class Summon1 extends Summon {
         super(tier);
         name = "Slime";
         description = "A small slime that shoots slime pellets at enemies";
+        tickDamage = 10;
+        tickIntervalMs = 1400;
+        attackRangePx = 260;
+        applySummonTier();
         applyTierMultipliers();
     }
 

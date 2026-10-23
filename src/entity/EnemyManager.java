@@ -16,12 +16,17 @@ import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.util.ArrayList;
 import java.util.List;
+import entity.attack.SlamCombat;
 import world.arena.ArenaCollision;
 
 public class EnemyManager {
 
     private ArrayList<Enemy> enemies = new ArrayList<>();
     private Boss activeBoss = null;
+    private double healthMultiplier = 1.0;
+    private double speedMultiplier = 1.0;
+    private double damageMultiplier = 1.0;
+    private int difficultyLevel = 1;
 
     public void spawnEnemy(int x, int y, int id) {
         Enemy enemy = switch(id) {
@@ -39,7 +44,10 @@ public class EnemyManager {
                 yield null;
             }
         };
-        if (enemy != null) enemies.add(enemy);
+        if (enemy != null) {
+            applyDifficultyScaling(enemy);
+            enemies.add(enemy);
+        }
     }
 
     public void update(Player player, int arenaWidth, int arenaHeight) {
@@ -47,39 +55,48 @@ public class EnemyManager {
     }
 
     public void update(Player player, int arenaWidth, int arenaHeight, List<Rectangle> obstacles) {
+        long now = System.currentTimeMillis();
         for (Enemy enemy : enemies) {
-            enemy.move(player, arenaWidth, arenaHeight, obstacles);
+            boolean stunned = enemy.isStunned();
+            boolean slamBusy = enemy.getSlam() != null && enemy.getSlam().isBusy(now);
+            if (!stunned && !slamBusy) {
+                enemy.move(player, arenaWidth, arenaHeight, obstacles);
+            }
+            if (!stunned && enemy.getSlam() != null) {
+                SlamCombat.tryCommit(enemy, player, now);
+            }
+            SlamCombat.resolveImpact(enemy, player, now);
             if (enemy.ranged) {
-                enemy.aimBarrel(player);
                 enemy.updateWeapon();
-                if (enemy.isPlayerInRange(player)) {
-                    boolean losClear = obstacles == null || obstacles.isEmpty()
-                            || ArenaCollision.lineOfSightClear(
-                                    enemy.getCenterX(), enemy.getCenterY(),
-                                    player.getCenterX(), player.getCenterY(), obstacles);
-                    if (losClear) {
-                        enemy.shoot();
+                if (!stunned && !slamBusy) {
+                    enemy.aimBarrel(player);
+                    if (enemy.isPlayerInRange(player)) {
+                        boolean losClear = obstacles == null || obstacles.isEmpty()
+                                || ArenaCollision.lineOfSightClear(
+                                        enemy.getCenterX(), enemy.getCenterY(),
+                                        player.getCenterX(), player.getCenterY(), obstacles);
+                        if (losClear) {
+                            enemy.shoot();
+                        }
                     }
                 }
-            } else if (enemy instanceof MeleeEnemy) {
-                // Handle melee enemy attacks
+            } else if (enemy instanceof MeleeEnemy && enemy.getSlam() == null) {
                 MeleeEnemy meleeEnemy = (MeleeEnemy) enemy;
-                int playerCenterX = player.getCenterX();
-                int playerCenterY = player.getCenterY();
-                int enemyCenterX = enemy.getCenterX();
-                int enemyCenterY = enemy.getCenterY();
+                if (!stunned) {
+                    int playerCenterX = player.getCenterX();
+                    int playerCenterY = player.getCenterY();
+                    int enemyCenterX = enemy.getCenterX();
+                    int enemyCenterY = enemy.getCenterY();
 
-                double distance = Math.sqrt(Math.pow(playerCenterX - enemyCenterX, 2) +
-                                          Math.pow(playerCenterY - enemyCenterY, 2));
+                    double distance = Math.sqrt(Math.pow(playerCenterX - enemyCenterX, 2) +
+                                              Math.pow(playerCenterY - enemyCenterY, 2));
 
-                // If in attack range, attempt to attack
-                if (distance <= meleeEnemy.preferredDistance + 10) {
-                    meleeEnemy.performAttack();
-                    if (meleeEnemy.isAttacking()) {
-                        // Deal damage to player
-                        player.takeDamage(meleeEnemy.damage);
-                        player.getStats().addDamageTaken(meleeEnemy.damage);
-                        meleeEnemy.setAttacking(false);
+                    if (distance <= meleeEnemy.preferredDistance + 10) {
+                        meleeEnemy.performAttack();
+                        if (meleeEnemy.isAttacking()) {
+                            player.takeDamage(meleeEnemy.damage);
+                            meleeEnemy.setAttacking(false);
+                        }
                     }
                 }
             }
@@ -87,7 +104,6 @@ public class EnemyManager {
             cullEnemyProjectilesAgainstObstacles(enemy, obstacles);
             enemy.checkDeath();
         }
-        // Remove dead enemies
         enemies.removeIf(Enemy::isDead);
     }
 
@@ -108,7 +124,6 @@ public class EnemyManager {
             for (Projectile p : enemy.getProjectiles()) {
                 if (player.checkCollision(p.getX(), p.getY())) {
                     player.takeDamage(p.getDamage());
-                    player.getStats().addDamageTaken(p.getDamage());
                     toRemove.add(p);
                     break; // Bullet hits player once
                 }
@@ -166,7 +181,10 @@ public class EnemyManager {
                 yield null;
             }
         };
-        if (miniboss != null) activeBoss = miniboss;
+        if (miniboss != null) {
+            applyDifficultyScaling(miniboss);
+            activeBoss = miniboss;
+        }
     }
 
     public void spawnBoss(int x, int y, int id) {
@@ -177,7 +195,10 @@ public class EnemyManager {
                 yield null;
             }
         };
-        if (boss != null) activeBoss = boss;
+        if (boss != null) {
+            applyDifficultyScaling(boss);
+            activeBoss = boss;
+        }
     }
 
     public Boss getActiveBoss() {
@@ -190,7 +211,15 @@ public class EnemyManager {
 
     public void updateBoss(Player player, int arenaWidth, int arenaHeight, List<Rectangle> obstacles) {
         if (activeBoss != null) {
-            activeBoss.move(player, arenaWidth, arenaHeight, obstacles);
+            long now = System.currentTimeMillis();
+            boolean slamBusy = activeBoss.getSlam() != null && activeBoss.getSlam().isBusy(now);
+            if (!activeBoss.isStunned() && !slamBusy) {
+                activeBoss.move(player, arenaWidth, arenaHeight, obstacles);
+            }
+            if (!activeBoss.isStunned() && activeBoss.getSlam() != null) {
+                SlamCombat.tryCommit(activeBoss, player, now);
+            }
+            SlamCombat.resolveImpact(activeBoss, player, now);
             activeBoss.checkDeath();
             if (activeBoss.isDead()) {
                 activeBoss = null;
@@ -210,25 +239,27 @@ public class EnemyManager {
         }
     }
 
-    public void applyDifficultyScaling(double healthMultiplier, double speedMultiplier, double damageMultiplier, int difficultyLevel) {
-        for (Enemy enemy : enemies) {
-            // Apply multipliers to enemy stats
-            enemy.hp = (int) (enemy.hp * healthMultiplier);
-            enemy.maxHp = (int) (enemy.maxHp * healthMultiplier);
-            enemy.speed *= speedMultiplier;
-            enemy.damage *= damageMultiplier;
-
-            // Apply difficulty to melee enemies' attack cooldowns
-            if (enemy instanceof MeleeEnemy) {
-                ((MeleeEnemy) enemy).setDifficultyCooldowns(difficultyLevel);
-            }
-        }
+    /**
+     * Stores the arena's difficulty multipliers. Scaling is applied when each enemy is spawned
+     * (see {@link #applyDifficultyScaling(Entity)}) rather than in a pass over the live list,
+     * which would miss every enemy that has not spawned yet.
+     */
+    public void setDifficultyScaling(double healthMultiplier, double speedMultiplier,
+                                     double damageMultiplier, int difficultyLevel) {
+        this.healthMultiplier = Math.max(0.1, healthMultiplier);
+        this.speedMultiplier = Math.max(0.1, speedMultiplier);
+        this.damageMultiplier = Math.max(0.1, damageMultiplier);
+        this.difficultyLevel = Math.max(1, difficultyLevel);
     }
 
-    public void applyArenaScaling(world.arena.arenas.StandardArena arena) {
-        applyDifficultyScaling(arena.getEnemyHealthMultiplier(),
-                             arena.getEnemySpeedMultiplier(),
-                             arena.getEnemyDamageMultiplier(),
-                             arena.getDifficultyLevel());
+    /** Applies the current arena multipliers to one freshly constructed enemy, miniboss or boss. */
+    private void applyDifficultyScaling(Entity entity) {
+        entity.maxHp = Math.round(entity.maxHp * healthMultiplier);
+        entity.hp = entity.maxHp;
+        entity.speed *= speedMultiplier;
+        entity.damage *= damageMultiplier;
+        if (entity instanceof MeleeEnemy) {
+            ((MeleeEnemy) entity).setDifficultyCooldowns(difficultyLevel);
+        }
     }
 }

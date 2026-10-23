@@ -1,7 +1,11 @@
 package ui.screens;
 
+import progression.QuestObjective;
 import progression.Reward;
 import progression.Reward.RewardType;
+import save.SaveData;
+import save.SaveManager;
+import skilltree.SkillEffects;
 import ui.GamePanel;
 import util.MouseHandler;
 import java.awt.*;
@@ -42,28 +46,54 @@ public class RewardsScreen {
         long seasonalExpiry = now + (30 * 24 * 60 * 60 * 1000); // 30 days
         
         // DAILY REWARDS (3)
-        rewards.add(new Reward("daily_1", "Daily Login", "Log in to receive rewards", 100, 5, 50, RewardType.DAILY, dailyExpiry));
-        rewards.add(new Reward("daily_2", "First Victory", "Win your first battle today", 250, 10, 100, RewardType.DAILY, dailyExpiry));
-        rewards.add(new Reward("daily_3", "Kill Streak", "Get 25 kills in one session", 500, 25, 250, RewardType.DAILY, dailyExpiry));
+        rewards.add(new Reward("daily_1", "Daily Login", "Log in to receive rewards", 100, 5, 50,
+                RewardType.DAILY, dailyExpiry, QuestObjective.NONE, 1));
+        rewards.add(new Reward("daily_2", "First Blood", "Defeat 10 enemies", 250, 10, 100,
+                RewardType.DAILY, dailyExpiry, QuestObjective.TOTAL_KILLS, 10));
+        rewards.add(new Reward("daily_3", "Kill Streak", "Defeat 25 enemies", 500, 25, 250,
+                RewardType.DAILY, dailyExpiry, QuestObjective.TOTAL_KILLS, 25));
         
         // WEEKLY REWARDS (5)
-        rewards.add(new Reward("weekly_1", "Weekly Grind", "Earn 1000 XP this week", 500, 25, 250, RewardType.WEEKLY, weeklyExpiry));
-        rewards.add(new Reward("weekly_2", "Arena Master", "Complete 5 arena runs", 750, 35, 400, RewardType.WEEKLY, weeklyExpiry));
-        rewards.add(new Reward("weekly_3", "Dungeon Delver", "Complete 3 dungeon runs", 600, 30, 300, RewardType.WEEKLY, weeklyExpiry));
-        rewards.add(new Reward("weekly_4", "Collector", "Collect 50 different items", 800, 40, 350, RewardType.WEEKLY, weeklyExpiry));
-        rewards.add(new Reward("weekly_5", "Boss Hunter", "Defeat 5 bosses this week", 1000, 50, 500, RewardType.WEEKLY, weeklyExpiry));
+        rewards.add(new Reward("weekly_1", "Battle Hardened", "Deal 25,000 total damage", 500, 25, 250,
+                RewardType.WEEKLY, weeklyExpiry, QuestObjective.TOTAL_DAMAGE, 25000));
+        rewards.add(new Reward("weekly_2", "Arena Regular", "Start 5 runs", 750, 35, 400,
+                RewardType.WEEKLY, weeklyExpiry, QuestObjective.RUNS_PLAYED, 5));
+        rewards.add(new Reward("weekly_3", "Wave Rider", "Reach wave 5 in a run", 600, 30, 300,
+                RewardType.WEEKLY, weeklyExpiry, QuestObjective.HIGHEST_WAVE, 5));
+        rewards.add(new Reward("weekly_4", "Collector", "Collect 15 items", 800, 40, 350,
+                RewardType.WEEKLY, weeklyExpiry, QuestObjective.ITEMS_COLLECTED, 15));
+        rewards.add(new Reward("weekly_5", "Tinkerer", "Discover 3 crafting recipes", 1000, 50, 500,
+                RewardType.WEEKLY, weeklyExpiry, QuestObjective.RECIPES_DISCOVERED, 3));
         
         // SEASONAL REWARDS (10, shown 5 at a time)
-        rewards.add(new Reward("seasonal_1", "Seasonal Starter", "Begin your seasonal adventure", 250, 15, 150, RewardType.SEASONAL, seasonalExpiry));
-        rewards.add(new Reward("seasonal_2", "Level 10", "Reach level 10", 500, 25, 250, RewardType.SEASONAL, seasonalExpiry));
-        rewards.add(new Reward("seasonal_3", "Level 25", "Reach level 25", 1000, 50, 500, RewardType.SEASONAL, seasonalExpiry));
-        rewards.add(new Reward("seasonal_4", "Level 50", "Reach level 50", 2000, 100, 1000, RewardType.SEASONAL, seasonalExpiry));
-        rewards.add(new Reward("seasonal_5", "Legendary Hunt", "Defeat 100 legendary enemies", 2500, 150, 1500, RewardType.SEASONAL, seasonalExpiry));
-        rewards.add(new Reward("seasonal_6", "Ultimate Champion", "Reach wave 100 in arena", 3000, 200, 2000, RewardType.SEASONAL, seasonalExpiry));
-        rewards.add(new Reward("seasonal_7", "Dungeon Master", "Complete all 5 dungeon levels", 2000, 100, 1000, RewardType.SEASONAL, seasonalExpiry));
-        rewards.add(new Reward("seasonal_8", "Treasure Collector", "Collect 500 items total", 1500, 75, 750, RewardType.SEASONAL, seasonalExpiry));
-        rewards.add(new Reward("seasonal_9", "Accuracy Master", "Achieve 90% accuracy", 1200, 60, 600, RewardType.SEASONAL, seasonalExpiry));
-        rewards.add(new Reward("seasonal_10", "Seasonal Legend", "Complete all seasonal rewards", 5000, 500, 5000, RewardType.SEASONAL, seasonalExpiry));
+        rewards.add(new Reward("seasonal_1", "Seasonal Starter", "Reach level 2", 250, 15, 150,
+                RewardType.SEASONAL, seasonalExpiry, QuestObjective.REACH_LEVEL, 2));
+        rewards.add(new Reward("seasonal_2", "Level 10", "Reach level 10", 500, 25, 250,
+                RewardType.SEASONAL, seasonalExpiry, QuestObjective.REACH_LEVEL, 10));
+        rewards.add(new Reward("seasonal_3", "Level 25", "Reach level 25", 1000, 50, 500,
+                RewardType.SEASONAL, seasonalExpiry, QuestObjective.REACH_LEVEL, 25));
+        rewards.add(new Reward("seasonal_4", "Level 50", "Reach level 50", 2000, 100, 1000,
+                RewardType.SEASONAL, seasonalExpiry, QuestObjective.REACH_LEVEL, 50));
+        rewards.add(new Reward("seasonal_5", "Slayer", "Defeat 500 enemies", 2500, 150, 1500,
+                RewardType.SEASONAL, seasonalExpiry, QuestObjective.TOTAL_KILLS, 500));
+        rewards.add(new Reward("seasonal_6", "Ultimate Champion", "Reach wave 25 in a run", 3000, 200, 2000,
+                RewardType.SEASONAL, seasonalExpiry, QuestObjective.HIGHEST_WAVE, 25));
+        rewards.add(new Reward("seasonal_7", "Trailblazer", "Unlock 3 arenas", 2000, 100, 1000,
+                RewardType.SEASONAL, seasonalExpiry, QuestObjective.ARENAS_UNLOCKED, 3));
+        rewards.add(new Reward("seasonal_8", "Treasure Collector", "Collect 100 items", 1500, 75, 750,
+                RewardType.SEASONAL, seasonalExpiry, QuestObjective.ITEMS_COLLECTED, 100));
+        rewards.add(new Reward("seasonal_9", "Master at Arms", "Earn 5 mastery medals", 1200, 60, 600,
+                RewardType.SEASONAL, seasonalExpiry, QuestObjective.MASTERY_MEDALS, 5));
+        rewards.add(new Reward("seasonal_10", "Seasonal Legend", "Deal 500,000 total damage", 5000, 500, 5000,
+                RewardType.SEASONAL, seasonalExpiry, QuestObjective.TOTAL_DAMAGE, 500000));
+
+        // Restore claims so rewards can't be farmed by restarting
+        SaveData data = SaveManager.load();
+        for (Reward r : rewards) {
+            if (data.isRewardClaimed(r.getId())) {
+                r.setClaimed(true);
+            }
+        }
     }
     
     public void handleClick(int x, int y) {
@@ -114,14 +144,24 @@ public class RewardsScreen {
     private void claimReward(String rewardId) {
         for (Reward r : rewards) {
             if (r.getId().equals(rewardId)) {
-                if (!r.isClaimed() && !r.isExpired()) {
-                    r.setClaimed(true);
-                    // Add currency rewards to player
-                    gamePanel.getCurrencyManager().addCash(r.getGoldAmount());
-                    gamePanel.getCurrencyManager().addGems(r.getGemAmount());
-                    // TODO: Add XP to player when player system is integrated
-                    System.out.println("Claimed: " + r.getTitle() + " (+$" + r.getGoldAmount() + ", +" + r.getGemAmount() + "◆)");
+                SaveData data = SaveManager.load();
+                if (!r.isClaimable(data)) {
+                    return;
                 }
+                r.setClaimed(true);
+                int cash = SkillEffects.scaleCashGain(r.getGoldAmount());
+                int gems = SkillEffects.scaleGemGain(r.getGemAmount());
+                gamePanel.getCurrencyManager().addCash(cash);
+                gamePanel.getCurrencyManager().addGems(gems);
+                if (r.getXpAmount() > 0) {
+                    SaveManager.addXP(r.getXpAmount());
+                }
+                data = SaveManager.load();
+                data.markRewardClaimed(r.getId());
+                data.setCash(gamePanel.getCurrencyManager().getPersistableCash());
+                data.setGems(gamePanel.getCurrencyManager().getPersistableGems());
+                SaveManager.save(data);
+                System.out.println("Claimed: " + r.getTitle() + " (+$" + cash + ", +" + gems + "◆)");
                 return;
             }
         }
@@ -253,11 +293,16 @@ public class RewardsScreen {
     }
     
     private void drawRewardCard(Graphics2D g, Reward reward, int x, int y, int width, int height) {
+        SaveData data = SaveManager.load();
+        boolean complete = reward.isComplete(data);
+
         Color cardColor;
         if (reward.isClaimed()) {
             cardColor = new Color(100, 100, 100); // Grey for claimed
         } else if (reward.isExpired()) {
             cardColor = new Color(150, 50, 50); // Red for expired
+        } else if (!complete) {
+            cardColor = new Color(120, 125, 140); // Muted for locked
         } else {
             // Color based on type
             if (reward.getType() == RewardType.DAILY) {
@@ -298,17 +343,19 @@ public class RewardsScreen {
         // Draw reward amounts
         g.setFont(new Font("Segoe UI", Font.PLAIN, 11));
         g.setColor(new Color(46, 204, 113));
-        g.drawString("$ " + reward.getGoldAmount(), x + 15, y + 70);
+        g.drawString("$ " + SkillEffects.scaleCashGain(reward.getGoldAmount()), x + 15, y + 70);
         
         g.setColor(new Color(52, 152, 219));
-        g.drawString("◆ " + reward.getGemAmount(), x + 15 + 120, y + 70);
+        g.drawString("◆ " + SkillEffects.scaleGemGain(reward.getGemAmount()), x + 15 + 95, y + 70);
         
         g.setColor(new Color(241, 196, 15));
-        g.drawString("XP " + reward.getXpAmount(), x + 15 + 240, y + 70);
+        g.drawString("XP " + reward.getXpAmount(), x + 15 + 180, y + 70);
+
+        drawObjectiveProgress(g, reward, data, x + 15, y + 80, width - 30);
         
         // Draw claim button
         int buttonX = x + 15;
-        int buttonY = y + 80;
+        int buttonY = y + 105;
         int buttonWidth = width - 30;
         int buttonHeight = 40;
         
@@ -349,6 +396,22 @@ public class RewardsScreen {
             int textY = buttonY + (buttonHeight + fm.getAscent() - fm.getDescent()) / 2;
             g.setColor(Color.WHITE);
             g.drawString(text, textX, textY);
+        } else if (!complete) {
+            // Objective not met yet
+            g.setColor(new Color(34, 36, 46));
+            g.fillRoundRect(buttonX, buttonY, buttonWidth, buttonHeight, 8, 8);
+            g.setColor(new Color(80, 84, 98));
+            g.setStroke(new BasicStroke(2));
+            g.drawRoundRect(buttonX, buttonY, buttonWidth, buttonHeight, 8, 8);
+            g.setStroke(new BasicStroke(1));
+
+            g.setFont(new Font("Segoe UI", Font.BOLD, 14));
+            String text = "IN PROGRESS";
+            FontMetrics fm = g.getFontMetrics();
+            int textX = buttonX + (buttonWidth - fm.stringWidth(text)) / 2;
+            int textY = buttonY + (buttonHeight + fm.getAscent() - fm.getDescent()) / 2;
+            g.setColor(new Color(140, 146, 165));
+            g.drawString(text, textX, textY);
         } else {
             // Claimable state
             if (isHovered) {
@@ -376,6 +439,26 @@ public class RewardsScreen {
         }
     }
     
+    private void drawObjectiveProgress(Graphics2D g, Reward reward, SaveData data, int x, int y, int width) {
+        if (reward.getObjective() == QuestObjective.NONE) {
+            return;
+        }
+
+        int progress = reward.getProgress(data);
+        int goal = reward.getGoal();
+        double ratio = Math.min(1.0, progress / (double) goal);
+
+        int barHeight = 6;
+        g.setColor(new Color(24, 26, 34));
+        g.fillRoundRect(x, y, width, barHeight, 4, 4);
+        g.setColor(ratio >= 1.0 ? new Color(46, 204, 113) : new Color(90, 150, 220));
+        g.fillRoundRect(x, y, (int) (width * ratio), barHeight, 4, 4);
+
+        g.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        g.setColor(new Color(185, 190, 205));
+        g.drawString(progress + " / " + goal, x, y + barHeight + 12);
+    }
+
     private void drawStyledButton(Graphics2D g, Rectangle btn, String label, Color accentColor, boolean isHovered) {
         // Button background with gradient
         if (isHovered) {

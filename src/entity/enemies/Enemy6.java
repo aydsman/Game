@@ -12,7 +12,7 @@ public class Enemy6 extends MeleeEnemy { // Sword Enemy
         // Sword enemies: balanced stats
         hp = 130;
         maxHp = 130;
-        speed = 3.8;
+        speed = 1.9;
         damage = 25.0;
         preferredDistance = 45.0; // Slightly farther for sword swings
         xpValue = 30;

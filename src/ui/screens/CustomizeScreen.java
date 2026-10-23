@@ -38,6 +38,7 @@ public class CustomizeScreen {
     private Rectangle styleCloseBtn = new Rectangle(styleSelectionArea.x + styleSelectionArea.width - 60, styleSelectionArea.y + 10, 50, 30);
 
     private Map<String, BufferedImage> iconCache = new HashMap<>();
+    private Map<String, String> equippedClothingStyles = new HashMap<>();
 
     // UI Elements - Main Screen (redesigned layout)
     private Rectangle accessoriesBtn = new Rectangle(50, 100, 180, 60);
@@ -74,7 +75,11 @@ public class CustomizeScreen {
     // Available options (hardcoded for now, later load from assets)
     private String[] eyeShapes = {"round", "narrow", "wide", "almond"};
     private String[] mouthExpressions = {"neutral", "smile", "open", "sad", "surprised"};
-    private String[] hairStyles = {"short", "long", "buzzcut", "ponytail"};
+    private String[] hairStyles = {
+        "fringe", "buzzcut", "middle_part", "side_part", "curtains",
+        "textured_crop", "crew_cut", "slick_back", "messy_hair", "caesar_cut",
+        "undercut", "faux_hawk", "long_flow", "curly_top", "mohawk"
+    };
     private String[] faceMarkings = {"none", "scar1", "freckles", "tattoo1"};
     private String[] bodyMarkings = {"none", "scar1", "tattoo1", "tattoo2"};
 
@@ -83,26 +88,36 @@ public class CustomizeScreen {
     private int selectedEyeColor = 0;
     private int selectedHairColor = 0;
 
-    // Skin color palette
-    private Color[][] skinColors = {
-        {new Color(255, 224, 189), new Color(255, 206, 152), new Color(255, 188, 115)}, // Light
-        {new Color(241, 194, 125), new Color(223, 166, 83), new Color(205, 138, 41)},   // Medium
-        {new Color(198, 134, 66), new Color(141, 85, 36), new Color(83, 36, 7)},       // Dark
-        {new Color(165, 107, 70), new Color(120, 63, 4), new Color(77, 25, 0)}         // Very Dark
-    };
+    // Each selectable skin contains exactly three tones: highlight, base, shadow.
+    private final Color[][] skinColors = CharacterRenderer.getDefaultSkinPalettes();
+    private final Color[][] eyeColors = CharacterRenderer.getDefaultEyePalettes();
+    private final Color[][] hairColors = CharacterRenderer.getDefaultHairPalettes();
 
     public CustomizeScreen(GamePanel gamePanel) {
         this.gamePanel = gamePanel;
         loadData();
         this.renderer = new CharacterRenderer();
-        renderer.loadAssets(tempAppearance, skinColors);
+        reloadPreview();
     }
 
     private void loadData() {
         SaveData data = SaveManager.load();
         this.tempAppearance = data.getAppearance() != null ? data.getAppearance() : new CharacterAppearance();
-        selectedSkinColor = tempAppearance.getSkinColorIndex();
+        selectedSkinColor = Math.max(0, Math.min(tempAppearance.getSkinColorIndex(), skinColors.length - 1));
+        selectedEyeColor = Math.max(0, Math.min(tempAppearance.getEyeColorIndex(), eyeColors.length - 1));
+        selectedHairColor = Math.max(0, Math.min(tempAppearance.getHairColorIndex(), hairColors.length - 1));
+        tempAppearance.setSkinColorIndex(selectedSkinColor);
+        tempAppearance.setEyeColorIndex(selectedEyeColor);
+        tempAppearance.setHairColorIndex(selectedHairColor);
+        Map<String, String> savedStyles = data.getEquippedClothingStyles();
+        this.equippedClothingStyles = savedStyles == null
+                ? new HashMap<>()
+                : new HashMap<>(savedStyles);
         this.wardrobe = gamePanel.getWardrobe();
+    }
+
+    private void reloadPreview() {
+        renderer.loadAssets(tempAppearance, skinColors, equippedClothingStyles);
     }
 
     public void handleMouseMove(int x, int y) {
@@ -230,20 +245,29 @@ public class CustomizeScreen {
             if (bodyTypeBtn.contains(x, y)) {
                 toggleBodyType();
             } else if (skinColorGrid.contains(x, y)) {
-                int cols = skinColors[0].length;
+                int cols = 2;
                 int cellWidth = skinColorGrid.width / cols;
-                int cellHeight = skinColorGrid.height / skinColors.length;
+                int rows = (skinColors.length + cols - 1) / cols;
+                int cellHeight = skinColorGrid.height / rows;
                 int col = (x - skinColorGrid.x) / cellWidth;
                 int row = (y - skinColorGrid.y) / cellHeight;
-                selectedSkinColor = row * cols + col;
-                tempAppearance.setSkinColorIndex(selectedSkinColor);
-                renderer.loadAssets(tempAppearance, skinColors); // Reload with new color
+                int paletteIndex = row * cols + col;
+                if (paletteIndex < skinColors.length) {
+                    selectedSkinColor = paletteIndex;
+                    tempAppearance.setSkinColorIndex(selectedSkinColor);
+                    reloadPreview();
+                }
             } else if (eyeShapeLeft.contains(x, y)) {
                 cycleEyeShape(-1);
             } else if (eyeShapeRight.contains(x, y)) {
                 cycleEyeShape(1);
             } else if (eyeColorGrid.contains(x, y)) {
-                // TODO: Handle eye color grid
+                int index = gridIndexAt(eyeColorGrid, eyeColors.length, 2, x, y);
+                if (index >= 0) {
+                    selectedEyeColor = index;
+                    tempAppearance.setEyeColorIndex(index);
+                    reloadPreview();
+                }
             } else if (mouthLeft.contains(x, y)) {
                 cycleMouth(-1);
             } else if (mouthRight.contains(x, y)) {
@@ -253,39 +277,66 @@ public class CustomizeScreen {
             } else if (hairStyleRight.contains(x, y)) {
                 cycleHairStyle(1);
             } else if (hairColorGrid.contains(x, y)) {
-                // TODO: Handle hair color grid
+                int index = gridIndexAt(hairColorGrid, hairColors.length, 2, x, y);
+                if (index >= 0) {
+                    selectedHairColor = index;
+                    tempAppearance.setHairColorIndex(index);
+                    reloadPreview();
+                }
             } else if (faceMarkingGrid.contains(x, y)) {
-                // TODO: Handle face marking grid
+                int index = gridIndexAt(faceMarkingGrid, faceMarkings.length, 2, x, y);
+                if (index >= 0) {
+                    tempAppearance.setFaceMarkingId(faceMarkings[index]);
+                    reloadPreview();
+                }
             } else if (bodyMarkingGrid.contains(x, y)) {
-                // TODO: Handle body marking grid
+                int index = gridIndexAt(bodyMarkingGrid, bodyMarkings.length, 2, x, y);
+                if (index >= 0) {
+                    tempAppearance.setBodyMarkingId(bodyMarkings[index]);
+                    reloadPreview();
+                }
             } else if (bodyBackBtn.contains(x, y)) {
                 bodyMode = false;
             }
         }
     }
 
+    private int gridIndexAt(Rectangle grid, int itemCount, int columns, int x, int y) {
+        int rows = (itemCount + columns - 1) / columns;
+        int col = (x - grid.x) * columns / grid.width;
+        int row = (y - grid.y) * rows / grid.height;
+        int index = row * columns + col;
+        return index >= 0 && index < itemCount ? index : -1;
+    }
+
     private void toggleBodyType() {
         tempAppearance.setGender(tempAppearance.getGender() == CharacterAppearance.Gender.MALE ?
             CharacterAppearance.Gender.FEMALE : CharacterAppearance.Gender.MALE);
-        renderer.loadAssets(tempAppearance, skinColors); // Reload assets for new gender
+        reloadPreview();
     }
 
     private void cycleEyeShape(int direction) {
         int currentIndex = java.util.Arrays.asList(eyeShapes).indexOf(tempAppearance.getEyeShape());
         currentIndex = (currentIndex + direction + eyeShapes.length) % eyeShapes.length;
         tempAppearance.setEyeShape(eyeShapes[currentIndex]);
+        reloadPreview();
     }
 
     private void cycleMouth(int direction) {
         int currentIndex = java.util.Arrays.asList(mouthExpressions).indexOf(tempAppearance.getMouthExpression());
         currentIndex = (currentIndex + direction + mouthExpressions.length) % mouthExpressions.length;
         tempAppearance.setMouthExpression(mouthExpressions[currentIndex]);
+        reloadPreview();
     }
 
     private void cycleHairStyle(int direction) {
         int currentIndex = java.util.Arrays.asList(hairStyles).indexOf(tempAppearance.getHairStyle());
+        if (currentIndex < 0) {
+            currentIndex = 0;
+        }
         currentIndex = (currentIndex + direction + hairStyles.length) % hairStyles.length;
         tempAppearance.setHairStyle(hairStyles[currentIndex]);
+        reloadPreview();
     }
 
     private void cycleClothing(ClothingType type, int direction) {
@@ -322,8 +373,10 @@ public class CustomizeScreen {
         SaveData data = SaveManager.load();
         data.setAppearance(tempAppearance);
         data.setUnlockedClothingIds(wardrobe.getUnlockedClothingIds());
+        data.getEquippedClothingStyles().clear();
+        data.getEquippedClothingStyles().putAll(equippedClothingStyles);
         SaveManager.save(data);
-        renderer.loadAssets(tempAppearance, skinColors); // Ensure assets are loaded
+        reloadPreview();
     }
 
     public void draw(Graphics2D g, int width, int height) {
@@ -408,6 +461,7 @@ public class CustomizeScreen {
         // Eyes section
         drawSectionLabel(g, "Eyes", 350, 220);
         drawArrowPair(g, eyeShapeLeft, eyeShapeRight, tempAppearance.getEyeShape(), hoveredButton == "eyeLeft", hoveredButton == "eyeRight");
+        drawThreeTonePalette(g, eyeColorGrid, eyeColors, selectedEyeColor);
 
         // Mouth section
         drawSectionLabel(g, "Mouth", 600, 220);
@@ -416,12 +470,13 @@ public class CustomizeScreen {
         // Hair section
         drawSectionLabel(g, "Hair", 50, 430);
         drawArrowPair(g, hairStyleLeft, hairStyleRight, tempAppearance.getHairStyle(), hoveredButton == "hairLeft", hoveredButton == "hairRight");
+        drawThreeTonePalette(g, hairColorGrid, hairColors, selectedHairColor);
 
         // Markings sections
         drawSectionLabel(g, "Face Markings", 350, 360);
-        drawPlaceholderGrid(g, faceMarkingGrid, tempAppearance.getFaceMarkingId());
+        drawMarkingGrid(g, faceMarkingGrid, faceMarkings, tempAppearance.getFaceMarkingId());
         drawSectionLabel(g, "Body Markings", 600, 360);
-        drawPlaceholderGrid(g, bodyMarkingGrid, tempAppearance.getBodyMarkingId());
+        drawMarkingGrid(g, bodyMarkingGrid, bodyMarkings, tempAppearance.getBodyMarkingId());
 
         // Back button
         drawStyledButton(g, bodyBackBtn, "Back", new Color(149, 165, 166), hoveredButton == "bodyBack");
@@ -448,7 +503,10 @@ public class CustomizeScreen {
         g.setFont(new Font("Segoe UI", Font.BOLD, 16));
         g.drawString("PREVIEW", previewArea.x + 20, previewArea.y + 30);
 
-        BufferedImage img = renderer.getTestCharacter();
+        BufferedImage img = renderer.getRedesignedBodyFrame(CharacterRenderer.Direction.DOWN);
+        if (img == null) {
+            img = renderer.getTestCharacter();
+        }
         if (img != null) {
             // Draw with shadow effect
             g.setColor(new Color(0, 0, 0, 50));
@@ -523,32 +581,35 @@ public class CustomizeScreen {
     }
 
     private void drawSkinColorPalette(Graphics2D g, Rectangle grid) {
-        int rows = skinColors.length;
-        int cols = skinColors[0].length;
+        int cols = 2;
+        int rows = (skinColors.length + cols - 1) / cols;
         int cellWidth = grid.width / cols;
         int cellHeight = grid.height / rows;
-        int padding = 4;
+        int padding = 10;
 
-        for (int r = 0; r < rows; r++) {
-            for (int c = 0; c < cols; c++) {
-                Color color = skinColors[r][c];
+        for (int index = 0; index < skinColors.length; index++) {
+                int r = index / cols;
+                int c = index % cols;
                 int cellX = grid.x + c * cellWidth + padding;
                 int cellY = grid.y + r * cellHeight + padding;
                 int cellSize = Math.min(cellWidth, cellHeight) - padding * 2;
 
-                // Draw color circle with shadow
+                // One swatch represents a complete highlight/base/shadow palette.
                 g.setColor(new Color(0, 0, 0, 30));
                 g.fillOval(cellX + 3, cellY + 3, cellSize, cellSize);
-                g.setColor(color);
+                g.setColor(skinColors[index][1]);
                 g.fillOval(cellX, cellY, cellSize, cellSize);
+                g.setColor(skinColors[index][0]);
+                g.fillArc(cellX + 4, cellY + 4, cellSize - 8, cellSize - 8, 90, 120);
+                g.setColor(skinColors[index][2]);
+                g.fillArc(cellX + 4, cellY + 4, cellSize - 8, cellSize - 8, 270, 120);
                 g.setColor(new Color(255, 255, 255, 100));
                 g.drawOval(cellX, cellY, cellSize, cellSize);
-            }
         }
 
-        // Highlight selected color with glow effect
-        int selectedRow = selectedSkinColor / 3;
-        int selectedCol = selectedSkinColor % 3;
+        // Highlight the selected complete palette.
+        int selectedRow = selectedSkinColor / cols;
+        int selectedCol = selectedSkinColor % cols;
         int cellX = grid.x + selectedCol * cellWidth + padding;
         int cellY = grid.y + selectedRow * cellHeight + padding;
         int cellSize = Math.min(cellWidth, cellHeight) - padding * 2;
@@ -603,6 +664,8 @@ public class CustomizeScreen {
                         List<String> styles = selected.getStyleOptions();
                         if (styles.size() == 1) {
                             selected.setSelectedStyle(styles.get(0));
+                            equippedClothingStyles.put(
+                                    selected.getName().toLowerCase(), styles.get(0));
                             SaveData data = SaveManager.load();
                             data.getEquippedClothingStyles().put(selected.getName().toLowerCase(), styles.get(0));
                             SaveManager.save(data);
@@ -613,6 +676,7 @@ public class CustomizeScreen {
                         case BOTTOM -> tempAppearance.setEquippedBottomId(selected == null ? null : selected.getName().toLowerCase());
                         case ACCESSORY -> tempAppearance.setEquippedAccessoryId(selected == null ? null : selected.getName().toLowerCase());
                     }
+                    reloadPreview();
                     return;
                 }
             }
@@ -823,15 +887,72 @@ public class CustomizeScreen {
         g.drawString(value, rect.x + 15, rect.y + 48);
     }
 
-    private void drawPlaceholderGrid(Graphics2D g, Rectangle rect, String selected) {
+    private void drawThreeTonePalette(Graphics2D g, Rectangle rect, Color[][] palettes, int selected) {
         g.setColor(new Color(40, 40, 50));
         g.fillRoundRect(rect.x, rect.y, rect.width, rect.height, 12, 12);
         g.setColor(new Color(70, 70, 80));
         g.drawRoundRect(rect.x, rect.y, rect.width, rect.height, 12, 12);
 
-        g.setColor(new Color(150, 150, 170));
-        g.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        g.drawString(selected, rect.x + 15, rect.y + rect.height / 2);
+        int cols = 2;
+        int rows = (palettes.length + cols - 1) / cols;
+        int cellWidth = rect.width / cols;
+        int cellHeight = rect.height / rows;
+        for (int i = 0; i < palettes.length; i++) {
+            int cellX = rect.x + (i % cols) * cellWidth;
+            int cellY = rect.y + (i / cols) * cellHeight;
+            int diameter = Math.min(cellWidth, cellHeight) - 24;
+            int swatchX = cellX + (cellWidth - diameter) / 2;
+            int swatchY = cellY + (cellHeight - diameter) / 2;
+
+            g.setColor(palettes[i][1]);
+            g.fillOval(swatchX, swatchY, diameter, diameter);
+            g.setColor(palettes[i][0]);
+            g.fillArc(swatchX + 3, swatchY + 3, diameter - 6, diameter - 6, 60, 120);
+            g.setColor(palettes[i][2]);
+            g.fillArc(swatchX + 3, swatchY + 3, diameter - 6, diameter - 6, 240, 120);
+            g.setColor(i == selected ? Color.WHITE : new Color(100, 100, 110));
+            g.setStroke(new BasicStroke(i == selected ? 3 : 1));
+            g.drawOval(swatchX - 3, swatchY - 3, diameter + 6, diameter + 6);
+            g.setStroke(new BasicStroke(1));
+        }
+    }
+
+    private void drawMarkingGrid(Graphics2D g, Rectangle rect, String[] markings, String selected) {
+        g.setColor(new Color(40, 40, 50));
+        g.fillRoundRect(rect.x, rect.y, rect.width, rect.height, 12, 12);
+        int cols = 2;
+        int rows = (markings.length + cols - 1) / cols;
+        int cellWidth = rect.width / cols;
+        int cellHeight = rect.height / rows;
+
+        for (int i = 0; i < markings.length; i++) {
+            int cellX = rect.x + (i % cols) * cellWidth + 6;
+            int cellY = rect.y + (i / cols) * cellHeight + 6;
+            int cellW = cellWidth - 12;
+            int cellH = cellHeight - 12;
+            boolean isSelected = markings[i].equals(selected);
+            g.setColor(isSelected ? new Color(62, 107, 137) : new Color(48, 48, 59));
+            g.fillRoundRect(cellX, cellY, cellW, cellH, 8, 8);
+            g.setColor(isSelected ? new Color(130, 215, 255) : new Color(76, 76, 88));
+            g.setStroke(new BasicStroke(isSelected ? 3 : 1));
+            g.drawRoundRect(cellX, cellY, cellW, cellH, 8, 8);
+            g.setStroke(new BasicStroke(1));
+
+            String label = formatOptionName(markings[i]);
+            g.setColor(Color.WHITE);
+            g.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+            FontMetrics fm = g.getFontMetrics();
+            g.drawString(label, cellX + (cellW - fm.stringWidth(label)) / 2,
+                    cellY + (cellH + fm.getAscent() - fm.getDescent()) / 2);
+        }
+    }
+
+    private String formatOptionName(String id) {
+        if (id == null || id.isEmpty()) {
+            return "None";
+        }
+        String spaced = id.replaceAll("([a-zA-Z])(\\d)", "$1 $2").replace('_', ' ');
+        return Character.toUpperCase(spaced.charAt(0)) + spaced.substring(1);
     }
 
     /**
@@ -1003,7 +1124,10 @@ public class CustomizeScreen {
                     // Save the equipped style
                     Map<String, String> equippedStyles = saveData.getEquippedClothingStyles();
                     equippedStyles.put(selectedClothingForStyling.getName().toLowerCase(), style);
+                    equippedClothingStyles.put(
+                            selectedClothingForStyling.getName().toLowerCase(), style);
                     SaveManager.save(saveData);
+                    reloadPreview();
 
                     System.out.println("Selected style: " + style + " for " + selectedClothingForStyling.getName());
                     // Do NOT close the style selector here; let the user close it explicitly

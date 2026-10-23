@@ -2,9 +2,12 @@ package entity;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.Rectangle;
 import java.util.ArrayList;
 import java.util.List;
 import combat.Projectile;
+import entity.ai.EnemyRole;
+import entity.attack.TelegraphedSlamRenderer;
 
 public class Enemy extends Entity {
 
@@ -12,8 +15,11 @@ public class Enemy extends Entity {
     private long lastShotTime = 0;
     protected int detectionRadius = 300; // pixels
     private boolean debugMode = false;
-    protected int xpValue = 25; // XP given when killed
-    protected int goldValue = 10; // Gold given when killed
+    protected EnemyRole role = EnemyRole.STRIKER;
+    /** Distance a kiter tries to hold. */
+    protected int kiteDistancePx = 240;
+    /** Distance a closer stops advancing so their short-range weapon can fire. */
+    protected int closerDistancePx = 110;
 
     public Enemy(int x, int y) {
         super(x, y);
@@ -22,7 +28,7 @@ public class Enemy extends Entity {
         maxHp = 100;
         // multipliers
         damage = 10.0;
-        speed = 4.0;
+        speed = 2.0;
         // combat
         ranged = true;
         // visuals
@@ -33,21 +39,65 @@ public class Enemy extends Entity {
         goldValue = 10; // Gold given when killed
     }
 
-    public int getGoldValue() {
-        return goldValue;
-    }
-
-    public int getXpValue() {
-        return xpValue;
-    }
-
     public void move(Player player, int arenaWidth, int arenaHeight) {
         move(player, arenaWidth, arenaHeight, null);
     }
 
     public void move(Player player, int arenaWidth, int arenaHeight, java.util.List<java.awt.Rectangle> obstacles) {
-        int step = Math.max(1, (int) Math.round(speed));
+        if (slam != null && slam.isBusy(System.currentTimeMillis())) {
+            return;
+        }
+        int step = Math.max(1, (int) Math.round(getEffectiveSpeed()));
+        if (role == EnemyRole.KITER) {
+            moveKite(player, arenaWidth, arenaHeight, obstacles, step);
+            return;
+        }
+        if (role == EnemyRole.CLOSER) {
+            moveCloser(player, arenaWidth, arenaHeight, obstacles, step);
+            return;
+        }
         world.arena.ArenaPathfinding.applyChaseStep(this, player, obstacles, arenaWidth, arenaHeight, step);
+    }
+
+    public EnemyRole getRole() {
+        return role;
+    }
+
+    private void moveKite(Player player, int arenaWidth, int arenaHeight, List<Rectangle> obstacles, int step) {
+        int dx = player.getCenterX() - getCenterX();
+        int dy = player.getCenterY() - getCenterY();
+        double distance = Math.sqrt((long) dx * dx + (long) dy * dy);
+        int band = 36;
+        if (distance > kiteDistancePx + band) {
+            world.arena.ArenaPathfinding.applyChaseStep(this, player, obstacles, arenaWidth, arenaHeight, step);
+            return;
+        }
+        int oldX = x;
+        int oldY = y;
+        if (distance < 1) {
+            return;
+        }
+        if (distance < kiteDistancePx - band) {
+            x -= (int) Math.round((dx / distance) * step);
+            y -= (int) Math.round((dy / distance) * step);
+        } else {
+            // Strafe so the kiter is not a stationary turret.
+            x += (int) Math.round((-dy / distance) * step);
+            y += (int) Math.round((dx / distance) * step);
+        }
+        int[] resolved = world.arena.ArenaCollision.resolveMovement(
+                oldX, oldY, x, y, w, l, obstacles, arenaWidth, arenaHeight);
+        x = resolved[0];
+        y = resolved[1];
+    }
+
+    private void moveCloser(Player player, int arenaWidth, int arenaHeight, List<Rectangle> obstacles, int step) {
+        int dx = player.getCenterX() - getCenterX();
+        int dy = player.getCenterY() - getCenterY();
+        double distance = Math.sqrt((long) dx * dx + (long) dy * dy);
+        if (distance > closerDistancePx) {
+            world.arena.ArenaPathfinding.applyChaseStep(this, player, obstacles, arenaWidth, arenaHeight, step);
+        }
     }
 
     public void aimBarrel(Player player) {
@@ -83,6 +133,7 @@ public class Enemy extends Entity {
     @Override
     public void draw(Graphics2D g, int cameraX, int cameraY) {
         super.draw(g, cameraX, cameraY);
+        TelegraphedSlamRenderer.draw(g, slam, System.currentTimeMillis(), cameraX, cameraY);
         // Draw detection circle outline only in debug mode
         if (debugMode) {
             g.setColor(Color.RED);

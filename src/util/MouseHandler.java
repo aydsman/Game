@@ -15,16 +15,32 @@ public class MouseHandler implements MouseListener, MouseMotionListener, MouseWh
     public boolean rightClicked = false;
     public int scrollDirection = 0; // 1 for scroll down, -1 for scroll up, 0 for no scroll
 
+    private double scaleX = 1.0;
+    private double scaleY = 1.0;
+    private int offsetX = 0;
+    private int offsetY = 0;
+
+    /** Maps panel pixels into the game's logical 1600x900 coordinate space. */
+    public void setDisplayTransform(double scaleX, double scaleY, int offsetX, int offsetY) {
+        this.scaleX = scaleX <= 0 ? 1.0 : scaleX;
+        this.scaleY = scaleY <= 0 ? 1.0 : scaleY;
+        this.offsetX = offsetX;
+        this.offsetY = offsetY;
+    }
+
+    private void updatePosition(MouseEvent e) {
+        mouseX = (int) ((e.getX() - offsetX) / this.scaleX);
+        mouseY = (int) ((e.getY() - offsetY) / this.scaleY);
+    }
+
     @Override
     public void mouseMoved(MouseEvent e) {
-        mouseX = e.getX();
-        mouseY = e.getY();
+        updatePosition(e);
     }
 
     @Override
     public void mouseDragged(MouseEvent e) {
-        mouseX = e.getX();
-        mouseY = e.getY();
+        updatePosition(e);
     }
 
     @Override
@@ -34,6 +50,7 @@ public class MouseHandler implements MouseListener, MouseMotionListener, MouseWh
 
     @Override
     public void mousePressed(MouseEvent e) {
+        updatePosition(e);
         if (e.getButton() == MouseEvent.BUTTON1) {
             leftPressed = true;
             leftClicked = true;

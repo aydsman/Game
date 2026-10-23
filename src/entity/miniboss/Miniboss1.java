@@ -10,9 +10,12 @@ public class Miniboss1 extends Boss {
         hp = 500;
         maxHp = 500;
         damage = 15.0;
-        speed = 2.0;
+        speed = 1.0;
         color = Color.RED;
         w = 60;
         l = 60;
+        xpValue = 120;
+        goldValue = 90;
+        enableSlam();
     }
 }

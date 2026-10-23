@@ -10,7 +10,7 @@ public class Enemy4 extends Enemy {
         hp = 400;
         maxHp = 400;
         damage = 20.0;
-        speed = 3;
+        speed = 1.5;
         color = Color.ORANGE;
         selectWeapon("sniper", 3);
         detectionRadius = 600;

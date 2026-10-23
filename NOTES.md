@@ -2,8 +2,9 @@
 
 ## Project Stats
 
-- **Total Classes:** 100
-- **Total Lines of Code:** 8,200+
+- **Total type declarations:** 260 (classes, interfaces, enums, and nested types)
+- **Java source files:** 242
+- **Total lines of code:** 23,850 (all lines in `src/**/*.java`)
 
 ## Legend
 - ✅ = Completed
@@ -32,7 +33,9 @@ Progression-based action game with open world exploration, dungeon crawling, tow
 
 ### Hub Features
 - ✅ Storage chest for items with drag-and-drop swapping between inventory and chests
-- ❌ Charm crafting station
+- ✅ NPCs and objects open real screens (loadout, shop, crafting, skill tree, locker,
+  quest board, profile, arena portal)
+- ✅ Crafting station (Artificer) for merging items into higher tiers
 - ❌ Leaderboard/stat display
 
 ---
@@ -41,40 +44,44 @@ Progression-based action game with open world exploration, dungeon crawling, tow
 
 ### Leveling
 - ✅ XP from killing enemies, completing dungeons/arenas
-- ❌ Level up grants skill points
+- ✅ Level up grants skill points (more at levels ending in 5 and 0)
 - ❌ Stat points to allocate (HP, damage, speed, etc.)
 
 ### Gear Progression
 - ✅ Weapons drop from enemies/chests
 - ✅ Rarity tiers: Tier I → Tier II → Tier III → Tier IV → Tier V
 - ✅ Each tier has better base stats
-- ❌ Weapons can be upgraded at blacksmith
+- ✏️ Weapon upgrades happen at the Artificer's crafting station (tier merges), not a
+  dedicated blacksmith screen
 - ✅ Item class hierarchy: Item (base) → Ranged, Melee, Charm, Summon, Power, Consumable
 - ✅ ItemRegistry with loot tables for chest generation
 - ✅ Item Gallery screen to view all items by type and tier
 
 ### Skill Tree Structure
-Three main branches:
+Three pillars, five tiers each. Unlocked nodes feed `skilltree.SkillEffects`, which is
+read by the player, weapons, loot boxes and reward payouts.
 
 **Combat:**
-- ❌ Damage
+- ✅ Damage
+- ✅ Reload speed
+- ✅ Crit chance
 - ❌ Fire rate
-- ❌ Reload speed
-- ❌ Crit chance
 
-**Survival:**
-- ❌ HP
-- ❌ Defense
-- ❌ Health regen
-- ❌ Dodge
+**Vitality:**
+- ✅ Max HP
+- ✅ Movement speed
+- ✅ Healing received
+- ✏️ Defense / dodge exist in combat (worn armor, Shift dodge); not yet skill-tree nodes
 
-**Utility:**
-- ❌ Movement speed
-- ❌ Loot chance
+**Abundance:**
+- ✅ Cash gain
+- ✅ Gem gain
+- ✅ Loot quality (biases loot box tier rolls)
 - ❌ Charm slots
 
-- ❌ Unlock nodes sequentially
-- ❌ Can respec at hub
+- ✅ Unlock nodes sequentially (parents required)
+- ✅ Full respec from the Skill Tree screen
+- ✅ Reachable from the hub Skill Tree object and the main menu
 
 ### Perk System
 - ❌ Choose 1 perk every 5 levels
@@ -190,17 +197,18 @@ world/
 ## Save/Load System
 
 ### What to Save
-- ❌ Player level, XP, stat allocation
-- ❌ Skill tree unlocks
-- ❌ Equipped gear
-- ❌ Inventory items
-- ❌ Currency
-- ❌ Hub progress (unlocked areas)
+- ✅ Player level and XP
+- ✅ Skill points and skill tree unlocks
+- ✅ Equipped gear / loadout selections
+- ✅ Inventory items and stacks
+- ✅ Currency (cash and gems; gold is session-only)
+- ✅ Unlocked arenas and last completed arena
+- ✅ Claimed quest/reward ids
 - ❌ Best arena scores
 
 ### File Format
-- ❌ JSON for easy editing/debugging
-- ❌ Auto-save after major events
+- ✅ JSON at `data/player_save.json`
+- ✅ Auto-save plus stat sync when returning to the menu
 - ❌ Manual save slots (3 slots)
 
 ---
@@ -271,19 +279,25 @@ Pre-run screen where players choose what they start with:
 ## Additional Features (Future)
 
 ### Items & Loot
-- ❌ Chests with random loot (weapons, ammo, health, combat.charms)
-- ❌ Different chest rarities (common, rare, legendary)
+- ✅ Chests with random loot via ItemRegistry loot tables
+- ✅ Loot boxes with tier/type probability rolls (see LootboxCatalog)
 - ❌ Keys required to open certain chests
 - ❌ Armor pieces (helmet, chestplate, legs) with defense stats
-- ❌ Charms that provide passive bonuses (speed, damage, health regen)
-- ❌ Consumable items (health potions, ammo boxes, temporary buffs)
-- ❌ Currency system (coins/gold dropped by enemies)
+- ✅ Charms that provide passive bonuses (speed, damage, max HP)
+- ✅ Consumable items (health, damage and speed potions with timed buffs)
+- ✅ Currency system (gold from enemies; cash and gems persist)
 
 ### Combat & Weapons
 - ✅ Melee weapons (swords, hammers, daggers, maces, scythes) with swing animations, arc collision, and knockback
+- ✅ Dodge (Shift) with i-frames; hurt i-frames after a landed hit
+- ✅ Crit visuals, hitstop, and per-weapon melee knockback
+- ✅ Dagger 3-hit combo; hammer on-hit stun (bosses resist); shotgun damage drop-off
+- ✅ Enemy roles (kiter, closer, slammer) and a telegraphed slam on slammers / bosses
+- ✅ Summons tick in combat; worn clothing grants light damage reduction
+- ✅ Perks unlock at account levels 5 / 10 / 15
 - ❌ Weapon attachments (scopes, silencers, extended magazines)
-- ❌ Critical hit system with visual effects
-- ❌ Status effects (burn, poison, slow, stun)
+- ✅ Critical hits from the skill tree (2x damage) with distinct popups
+- ✏️ Status effects exist on entities (stun, slow, burn); not exposed on all weapons
 - ❌ Grenades/throwables with different effects
 - ❌ Special abilities/ultimates with cooldowns
 
@@ -307,7 +321,9 @@ Pre-run screen where players choose what they start with:
 - ✅ Camera system (follows player)
 - ✅ Input handling (keyboard, mouse)
 - ✅ UI screens (Menu, Game, Pause, Settings, Help, Customize)
+- ✅ Borderless fullscreen launch with scaled 1600x900 rendering
+- ✅ Quest objectives tracked from save stats, gating reward claims
 - ❌ Achievements/trophies
 - ❌ Difficulty settings
 - ❌ Co-op multiplayer
-- ❌ Crafting system to combine items
+- ✅ Crafting system to combine items (tier merges at the Artificer)

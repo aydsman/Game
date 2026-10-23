@@ -2,7 +2,7 @@ package combat.powers;
 
 public class Sharingan extends Power {
     public Sharingan() {
-        this(5);
+        this(3);
     }
 
     public Sharingan(int tier) {

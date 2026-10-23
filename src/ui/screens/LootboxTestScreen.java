@@ -65,10 +65,11 @@ public class LootboxTestScreen {
     private Rectangle clearItemsBtn = new Rectangle(clearClothingBtn.x - H_GAP - 210, TOP_ROW_Y, 210, BTN_H);
     private Rectangle buyFiveBtn = new Rectangle(clearItemsBtn.x - H_GAP - 108, TOP_ROW_Y, 108, BTN_H);
     private Rectangle buyOneBtn = new Rectangle(buyFiveBtn.x - H_GAP - 108, TOP_ROW_Y, 108, BTN_H);
-    private final int grantBtnW = (clearClothingBtn.x + clearClothingBtn.width - buyOneBtn.x - 2 * H_GAP) / 3;
+    private final int grantBtnW = (clearClothingBtn.x + clearClothingBtn.width - buyOneBtn.x - 3 * H_GAP) / 4;
     private Rectangle grantTestTokensBtn = new Rectangle(buyOneBtn.x, TOKEN_GRANT_ROW_Y, grantBtnW, GRANT_BTN_H);
     private Rectangle grantClothesTokensBtn = new Rectangle(buyOneBtn.x + grantBtnW + H_GAP, TOKEN_GRANT_ROW_Y, grantBtnW, GRANT_BTN_H);
     private Rectangle grantPowerTokensBtn = new Rectangle(buyOneBtn.x + 2 * (grantBtnW + H_GAP), TOKEN_GRANT_ROW_Y, grantBtnW, GRANT_BTN_H);
+    private Rectangle grantFruitTokensBtn = new Rectangle(buyOneBtn.x + 3 * (grantBtnW + H_GAP), TOKEN_GRANT_ROW_Y, grantBtnW, GRANT_BTN_H);
     // Open row: uniform spacing from left (aligned under crate column)
     private static final int OPEN_W = 108;
     private Rectangle x1Btn = new Rectangle(114, OPEN_ROW_Y, OPEN_W, BTN_H);
@@ -117,6 +118,8 @@ public class LootboxTestScreen {
             grantLootboxTokens(LootboxCatalog.CLOTHES_CRATE_1_ID, "Clothes Crate 1");
         } else if (grantPowerTokensBtn.contains(x, y)) {
             grantLootboxTokens(LootboxCatalog.SHOP_EXCLUSIVE_POWER_CRATE_ID, "Power Surge Crate");
+        } else if (grantFruitTokensBtn.contains(x, y)) {
+            grantLootboxTokens(LootboxCatalog.FRUIT_CRATE_ID, "Fruit Crate");
         } else if (selectedLootbox != null && x1Btn.contains(x, y)) {
             rollLootbox(1);
         } else if (selectedLootbox != null && x5Btn.contains(x, y)) {
@@ -293,6 +296,7 @@ public class LootboxTestScreen {
         drawButton(g, grantTestTokensBtn, "+1 Test", grantBase, true);
         drawButton(g, grantClothesTokensBtn, "+1 Clothes", grantBase, true);
         drawButton(g, grantPowerTokensBtn, "+1 Power", grantBase, true);
+        drawButton(g, grantFruitTokensBtn, "+1 Fruit", grantBase, true);
 
         // Roll buttons (disabled if no lootbox selected)
         boolean canRoll = selectedLootbox != null;
@@ -345,10 +349,14 @@ public class LootboxTestScreen {
 
     /** Cash + gems after header buttons (no prompt text — avoids overlap). */
     private void drawLootboxStatusStrip(Graphics2D g, CurrencyManager cm) {
-        int pillX = powerCrateBtn.x + powerCrateBtn.width + H_GAP;
-        int pillW = Math.max(120, buyOneBtn.x - pillX - H_GAP);
-        int pillY = TOP_ROW_Y;
-        int pillH = BTN_H;
+        // Place this strip on the left of the token-grant row so it never overlaps crate buttons.
+        int pillX = x1Btn.x;
+        int pillW = grantTestTokensBtn.x - pillX - H_GAP;
+        if (pillW < 180) {
+            return;
+        }
+        int pillY = TOKEN_GRANT_ROW_Y;
+        int pillH = GRANT_BTN_H;
 
         g.setColor(new Color(8, 10, 18, 230));
         g.fillRoundRect(pillX, pillY, pillW, pillH, 8, 8);

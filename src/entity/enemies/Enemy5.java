@@ -12,7 +12,7 @@ public class Enemy5 extends Enemy {
         hp = 50;
         maxHp = 50;
         damage = 10.0;
-        speed = 3.0;
+        speed = 1.5;
         color = Color.YELLOW;
         ranged = true;
         selectWeapon("smg", 5);

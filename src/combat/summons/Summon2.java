@@ -9,6 +9,10 @@ public class Summon2 extends Summon {
         super(tier);
         name = "Lil Volcano";
         description = "A little volcano that shoots enemies with lava.";
+        tickDamage = 16;
+        tickIntervalMs = 1600;
+        attackRangePx = 300;
+        applySummonTier();
         applyTierMultipliers();
     }
 

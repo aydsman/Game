@@ -14,8 +14,13 @@ import ui.screens.ShopScreen;
 import ui.screens.LootboxTestScreen;
 import ui.screens.RewardsScreen;
 import ui.screens.ArenaSelectionScreen;
+import ui.screens.ModeSelectionScreen;
 import ui.screens.SkillTreeScreen;
 import ui.screens.CraftingScreen;
+import ui.screens.MasteryScreen;
+import ui.screens.InventoryHubScreen;
+import ui.screens.ProfileScreen;
+import ui.screens.CharacterViewerScreen;
 import world.dungeon.DungeonArenaScreen;
 import player.Wardrobe;
 import util.KeyHandler;
@@ -65,8 +70,13 @@ public class GamePanel extends JPanel implements Runnable {
     LootboxTestScreen lootboxTestScreen;
     RewardsScreen rewardsScreen;
     ArenaSelectionScreen arenaSelectionScreen;
+    ModeSelectionScreen modeSelectionScreen;
     SkillTreeScreen skillTreeScreen;
     CraftingScreen craftingScreen;
+    MasteryScreen masteryScreen;
+    InventoryHubScreen inventoryHubScreen;
+    ProfileScreen profileScreen;
+    CharacterViewerScreen characterViewerScreen;
 
     // screen states
     boolean showMenu = true;
@@ -84,8 +94,13 @@ public class GamePanel extends JPanel implements Runnable {
     boolean showLootboxTest = false;
     boolean showRewards = false;
     boolean showArenaSelection = false;
+    boolean showModeSelection = false;
     boolean showSkillTree = false;
     boolean showCrafting = false;
+    boolean showMastery = false;
+    boolean showInventoryHub = false;
+    boolean showProfile = false;
+    boolean showCharacterViewer = false;
 
     // Track previous screen for navigation
     private String previousScreen = "menu";
@@ -97,12 +112,20 @@ public class GamePanel extends JPanel implements Runnable {
 
     /** Session-only admin: big wallets / unlocks; cash & gem *earnings* still persist (see CurrencyManager bank). */
     private boolean sessionAdminMode;
+    /** Mirror of {@link #sessionAdminMode} accessible to model classes that don't hold a GamePanel reference. */
+    private static volatile boolean sessionAdminActive = false;
+    public static boolean isAdminModeActive() { return sessionAdminActive; }
     private Set<String> adminArenaSnap = new HashSet<>();
     private String adminLastArenaSnap;
     private final List<RecipeUnlockNotification> recipeUnlockNotifications = new ArrayList<>();
     private static final long RECIPE_UNLOCK_NOTIFICATION_MS = 4300;
     private static final long RECIPE_UNLOCK_CHECK_INTERVAL_MS = 700;
     private long lastRecipeUnlockCheckMs;
+
+    /** Scales logical 1600x900 content to fill the current panel size. */
+    private double renderScale = 1.0;
+    private int renderOffsetX = 0;
+    private int renderOffsetY = 0;
 
     Thread gameThread;
 
@@ -128,8 +151,13 @@ public class GamePanel extends JPanel implements Runnable {
         lootboxTestScreen = new LootboxTestScreen(this);
         rewardsScreen = new RewardsScreen(this);
         arenaSelectionScreen = new ArenaSelectionScreen(this);
+        modeSelectionScreen = new ModeSelectionScreen(this);
         skillTreeScreen = new SkillTreeScreen(this);
         craftingScreen = new CraftingScreen(this);
+        masteryScreen = new MasteryScreen(this);
+        inventoryHubScreen = new InventoryHubScreen(this);
+        profileScreen = new ProfileScreen(this);
+        characterViewerScreen = new CharacterViewerScreen(this);
         
         SaveManager.setPreSaveMutator(this::applySessionAdminPreSave);
 
@@ -159,38 +187,51 @@ public class GamePanel extends JPanel implements Runnable {
                 boolean lootboxActive = showLootboxTest;
                 boolean rewardsActive = showRewards;
                 boolean arenaSelectionActive = showArenaSelection;
+                boolean modeSelectionActive = showModeSelection;
                 boolean skillTreeActive = showSkillTree;
                 boolean craftingActive = showCrafting;
+                boolean masteryActive = showMastery;
+                boolean inventoryActive = showInventoryHub;
+                boolean profileActive = showProfile;
+                boolean characterViewerActive = showCharacterViewer;
                 boolean gameActive = showGame;
                 boolean dungeonActive = showDungeonArena;
 
-                if (menuActive) menuScreen.handleClick(e.getX(), e.getY());
+                int mx = toLogicalX(e.getX());
+                int my = toLogicalY(e.getY());
+
+                if (menuActive) menuScreen.handleClick(mx, my);
                 if (hubActive) {
-                    hubScreen.handleHubDevClick(e.getX(), e.getY(), SCREEN_WIDTH, SCREEN_HEIGHT);
-                    hubScreen.handlePauseMenuClick(e.getX(), e.getY(), SCREEN_WIDTH, SCREEN_HEIGHT);
+                    hubScreen.handleHubDevClick(mx, my, SCREEN_WIDTH, SCREEN_HEIGHT);
+                    hubScreen.handlePauseMenuClick(mx, my, SCREEN_WIDTH, SCREEN_HEIGHT);
                 }
                 // Note: DO NOT call resetMouseClicks here - it prevents shooting!
                 // resetMouseClicks is already called when switching screens
-                if (customizeActive) customizeScreen.handleClick(e.getX(), e.getY());
-                if (settingsActive) settingsScreen.handleClick(e.getX(), e.getY());
-                if (helpActive) helpScreen.handleClick(e.getX(), e.getY());
-                if (graphTestActive) graphTestScreen.handleClick(e.getX(), e.getY());
-                if (itemsActive) itemGalleryScreen.handleClick(e.getX(), e.getY());
-                if (loadoutActive) loadoutScreen.handleClick(e.getX(), e.getY());
-                if (shopActive) shopScreen.handleClick(e.getX(), e.getY());
-                if (lootboxActive) lootboxTestScreen.handleClick(e.getX(), e.getY());
-                if (rewardsActive) rewardsScreen.handleClick(e.getX(), e.getY());
-                if (arenaSelectionActive) arenaSelectionScreen.handleClick(e.getX(), e.getY());
-                if (skillTreeActive) skillTreeScreen.handleClick(e.getX(), e.getY());
-                if (craftingActive) craftingScreen.handleClick(e.getX(), e.getY());
+                if (customizeActive) customizeScreen.handleClick(mx, my);
+                if (settingsActive) settingsScreen.handleClick(mx, my);
+                if (helpActive) helpScreen.handleClick(mx, my);
+                if (graphTestActive) graphTestScreen.handleClick(mx, my);
+                if (itemsActive) itemGalleryScreen.handleClick(mx, my);
+                if (loadoutActive) loadoutScreen.handleClick(mx, my);
+                if (shopActive) shopScreen.handleClick(mx, my);
+                if (lootboxActive) lootboxTestScreen.handleClick(mx, my);
+                if (rewardsActive) rewardsScreen.handleClick(mx, my);
+                if (arenaSelectionActive) arenaSelectionScreen.handleClick(mx, my);
+                if (modeSelectionActive) modeSelectionScreen.handleClick(mx, my);
+                if (skillTreeActive) skillTreeScreen.handleClick(mx, my);
+                if (craftingActive) craftingScreen.handleClick(mx, my);
+                if (masteryActive) masteryScreen.handleClick(mx, my);
+                if (inventoryActive) inventoryHubScreen.handleClick(mx, my);
+                if (profileActive) profileScreen.handleClick(mx, my);
+                if (characterViewerActive) characterViewerScreen.handleClick(mx, my);
                 if (gameActive) {
                     requestFocusInWindow();
-                    if (gameScreen.handleArenaCompletionClick(mouseHandler, e.getX(), e.getY(), SCREEN_WIDTH, SCREEN_HEIGHT)) {
+                    if (gameScreen.handleOverlayClick(mouseHandler, mx, my, SCREEN_WIDTH, SCREEN_HEIGHT)) {
                         return;
                     }
-                    gameScreen.handlePauseMenuClick(e.getX(), e.getY(), SCREEN_WIDTH, SCREEN_HEIGHT);
+                    gameScreen.handlePauseMenuClick(mx, my, SCREEN_WIDTH, SCREEN_HEIGHT);
                 }
-                if (dungeonActive) dungeonArenaScreen.handlePauseMenuClick(e.getX(), e.getY(), SCREEN_WIDTH, SCREEN_HEIGHT);
+                if (dungeonActive) dungeonArenaScreen.handlePauseMenuClick(mx, my, SCREEN_WIDTH, SCREEN_HEIGHT);
             }
         });
 
@@ -203,12 +244,21 @@ public class GamePanel extends JPanel implements Runnable {
         addMouseMotionListener(new MouseAdapter() {
             @Override
             public void mouseMoved(MouseEvent e) {
-                if (showRewards) rewardsScreen.handleMouseMove(e.getX(), e.getY());
-                if (showMenu) menuScreen.handleMouseMove(e.getX(), e.getY());
-                if (showArenaSelection) arenaSelectionScreen.handleMouseMove(e.getX(), e.getY());
-                if (showShop) shopScreen.handleMouseMove(e.getX(), e.getY());
-                if (showSkillTree) skillTreeScreen.handleMouseMove(e.getX(), e.getY());
-                if (showCrafting) craftingScreen.handleMouseMove(e.getX(), e.getY());
+                int mx = toLogicalX(e.getX());
+                int my = toLogicalY(e.getY());
+                if (showRewards) rewardsScreen.handleMouseMove(mx, my);
+                if (showMenu) menuScreen.handleMouseMove(mx, my);
+                if (showArenaSelection) arenaSelectionScreen.handleMouseMove(mx, my);
+                if (showModeSelection) modeSelectionScreen.handleMouseMove(mx, my);
+                if (showShop) shopScreen.handleMouseMove(mx, my);
+                if (showSkillTree) skillTreeScreen.handleMouseMove(mx, my);
+                if (showCrafting) craftingScreen.handleMouseMove(mx, my);
+                if (showMastery) masteryScreen.handleMouseMove(mx, my);
+                if (showInventoryHub) inventoryHubScreen.handleMouseMove(mx, my);
+                if (showProfile) profileScreen.handleMouseMove(mx, my);
+                if (showCharacterViewer) characterViewerScreen.handleMouseMove(mx, my);
+                if (showSettings) settingsScreen.handleMouseMove(mx, my);
+                if (showHelp) helpScreen.handleMouseMove(mx, my);
             }
         });
         setFocusable(true);
@@ -240,19 +290,20 @@ public class GamePanel extends JPanel implements Runnable {
         showLootboxTest = false;
         showRewards = false;
         showArenaSelection = false;
+        showModeSelection = false;
         showSkillTree = false;
         showCrafting = false;
+        showMastery = false;
+        showInventoryHub = false;
+        showProfile = false;
+        showCharacterViewer = false;
 
         switch (screen) {
             case "menu"      -> {
                 // Sync stats from current session before showing menu
                 if (wasInGame) {
                     // Coming from arena - sync arena stats
-                    save.SaveManager.syncPlayerStats(
-                        gameScreen.getPlayer().getStats(),
-                        gameScreen.getWaveManager().getCurrentWave(),
-                        1
-                    );
+                    gameScreen.syncRunStatsOnExit();
                 } else if (wasInDungeon) {
                     // Coming from dungeon - sync dungeon stats  
                     save.SaveManager.syncPlayerStats(
@@ -286,6 +337,7 @@ public class GamePanel extends JPanel implements Runnable {
             }
             case "hub"       -> {
                 showHub = true;
+                hubScreen.getPlayer().refreshCharacterAppearance();
                 // Apply loadout when entering hub
                 hubScreen.getPlayer().applyLoadout(
                     loadoutScreen.getSelectedWeapon(),
@@ -308,7 +360,10 @@ public class GamePanel extends JPanel implements Runnable {
             case "help"      -> showHelp = true;
             case "graphtest" -> showGraphTest = true;
             case "items"     -> showItems = true;
-            case "dungeon"   -> showDungeonArena = true;
+            case "dungeon"   -> {
+                dungeonArenaScreen.getPlayer().refreshCharacterAppearance();
+                showDungeonArena = true;
+            }
             case "loadout"   -> showLoadout = true;
             case "shop"      -> showShop = true;
             case "lootboxtest" -> showLootboxTest = true;
@@ -317,10 +372,22 @@ public class GamePanel extends JPanel implements Runnable {
                 arenaSelectionScreen.refreshProgressionFromSave();
                 showArenaSelection = true;
             }
+            case "modeselection" -> showModeSelection = true;
             case "skilltree" -> showSkillTree = true;
             case "crafting" -> {
                 craftingScreen.refreshFromSave();
                 showCrafting = true;
+            }
+            case "mastery" -> {
+                masteryScreen.setReturnScreen(previousScreen);
+                masteryScreen.refreshWeaponList();
+                showMastery = true;
+            }
+            case "inventory" -> showInventoryHub = true;
+            case "profile" -> showProfile = true;
+            case "character" -> {
+                characterViewerScreen.refresh();
+                showCharacterViewer = true;
             }
         }
     }
@@ -349,6 +416,7 @@ public class GamePanel extends JPanel implements Runnable {
         if (showHub) hubScreen.update(keyHandler, mouseHandler, SCREEN_WIDTH, SCREEN_HEIGHT);
         if (showDungeonArena) dungeonArenaScreen.update(keyHandler, mouseHandler, SCREEN_WIDTH, SCREEN_HEIGHT);
         if (showCrafting) craftingScreen.update(mouseHandler);
+        if (showCharacterViewer) characterViewerScreen.update();
         updateCraftingRecipeUnlocks();
         
         // Customize screen input handling
@@ -398,10 +466,37 @@ public class GamePanel extends JPanel implements Runnable {
         }
     }
 
+    private void updateRenderTransform() {
+        int panelW = Math.max(1, getWidth());
+        int panelH = Math.max(1, getHeight());
+        renderScale = Math.min(panelW / (double) SCREEN_WIDTH, panelH / (double) SCREEN_HEIGHT);
+        int drawW = (int) Math.round(SCREEN_WIDTH * renderScale);
+        int drawH = (int) Math.round(SCREEN_HEIGHT * renderScale);
+        renderOffsetX = (panelW - drawW) / 2;
+        renderOffsetY = (panelH - drawH) / 2;
+        mouseHandler.setDisplayTransform(renderScale, renderScale, renderOffsetX, renderOffsetY);
+    }
+
+    private int toLogicalX(int panelX) {
+        updateRenderTransform();
+        return (int) ((panelX - renderOffsetX) / renderScale);
+    }
+
+    private int toLogicalY(int panelY) {
+        updateRenderTransform();
+        return (int) ((panelY - renderOffsetY) / renderScale);
+    }
+
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
+        updateRenderTransform();
+
         Graphics2D g2 = (Graphics2D) g;
+        g2.setColor(Color.BLACK);
+        g2.fillRect(0, 0, getWidth(), getHeight());
+        g2.translate(renderOffsetX, renderOffsetY);
+        g2.scale(renderScale, renderScale);
 
         if (showMenu)         menuScreen.draw(g2);
         if (showGame)         gameScreen.draw(g2, SCREEN_WIDTH, SCREEN_HEIGHT);
@@ -418,8 +513,13 @@ public class GamePanel extends JPanel implements Runnable {
         if (showLootboxTest)  lootboxTestScreen.draw(g2);
         if (showRewards)      rewardsScreen.draw(g2, SCREEN_WIDTH, SCREEN_HEIGHT);
         if (showArenaSelection) arenaSelectionScreen.draw(g2, SCREEN_WIDTH, SCREEN_HEIGHT);
+        if (showModeSelection) modeSelectionScreen.draw(g2, SCREEN_WIDTH, SCREEN_HEIGHT);
         if (showSkillTree)    skillTreeScreen.draw(g2, SCREEN_WIDTH, SCREEN_HEIGHT);
         if (showCrafting)     craftingScreen.draw(g2, SCREEN_WIDTH, SCREEN_HEIGHT);
+        if (showMastery)      masteryScreen.draw(g2, SCREEN_WIDTH, SCREEN_HEIGHT);
+        if (showInventoryHub) inventoryHubScreen.draw(g2, SCREEN_WIDTH, SCREEN_HEIGHT);
+        if (showProfile)      profileScreen.draw(g2, SCREEN_WIDTH, SCREEN_HEIGHT);
+        if (showCharacterViewer) characterViewerScreen.draw(g2, SCREEN_WIDTH, SCREEN_HEIGHT);
         drawRecipeUnlockNotifications(g2);
     }
 
@@ -468,6 +568,8 @@ public class GamePanel extends JPanel implements Runnable {
         currencyManager.beginSessionAdminCurrencies(cap, cap);
         grantSessionAdminGoldToPlayers(cap);
         sessionAdminMode = true;
+        sessionAdminActive = true;
+        refreshEquippedPowerMoveUnlocks();
     }
 
     private void disableSessionAdminMode() {
@@ -479,6 +581,23 @@ public class GamePanel extends JPanel implements Runnable {
         d.setLastCompletedArena(adminLastArenaSnap);
         SaveManager.save(d);
         sessionAdminMode = false;
+        sessionAdminActive = false;
+        refreshEquippedPowerMoveUnlocks();
+    }
+
+    private void refreshEquippedPowerMoveUnlocks() {
+        if (gameScreen != null && gameScreen.getPlayer() != null) {
+            combat.powers.Power equipped = gameScreen.getPlayer().getInventory().getPower();
+            if (equipped != null) {
+                equipped.applyMasteryMoveUnlocks();
+            }
+        }
+        if (hubScreen != null && hubScreen.getPlayer() != null) {
+            combat.powers.Power equipped = hubScreen.getPlayer().getInventory().getPower();
+            if (equipped != null) {
+                equipped.applyMasteryMoveUnlocks();
+            }
+        }
     }
 
     private void grantSessionAdminGoldToPlayers(int amount) {
@@ -492,6 +611,34 @@ public class GamePanel extends JPanel implements Runnable {
         }
         data.setCash(currencyManager.getPersistableCash());
         data.setGems(currencyManager.getPersistableGems());
+    }
+
+    /** True when the window currently covers the whole monitor. */
+    public boolean isFullScreenDisplay() {
+        java.awt.Window window = javax.swing.SwingUtilities.getWindowAncestor(this);
+        if (window == null) {
+            return true;
+        }
+        java.awt.Rectangle screen = window.getGraphicsConfiguration().getBounds();
+        return window.getWidth() >= screen.width && window.getHeight() >= screen.height;
+    }
+
+    /** Switches between borderless fullscreen and a centered {@value #SCREEN_WIDTH}x{@value #SCREEN_HEIGHT} window. */
+    public void setFullScreenDisplay(boolean fullScreen) {
+        java.awt.Window window = javax.swing.SwingUtilities.getWindowAncestor(this);
+        if (window == null) {
+            return;
+        }
+        java.awt.Rectangle screen = window.getGraphicsConfiguration().getBounds();
+        if (fullScreen) {
+            window.setBounds(screen);
+        } else {
+            int w = Math.min(SCREEN_WIDTH, screen.width);
+            int h = Math.min(SCREEN_HEIGHT, screen.height);
+            window.setBounds(screen.x + (screen.width - w) / 2, screen.y + (screen.height - h) / 2, w, h);
+        }
+        window.validate();
+        requestFocusInWindow();
     }
 
     /**
@@ -542,8 +689,13 @@ public class GamePanel extends JPanel implements Runnable {
         if (showLootboxTest) return "lootboxtest";
         if (showRewards) return "rewards";
         if (showArenaSelection) return "arenaselection";
+        if (showModeSelection) return "modeselection";
         if (showSkillTree) return "skilltree";
         if (showCrafting) return "crafting";
+        if (showMastery) return "mastery";
+        if (showInventoryHub) return "inventory";
+        if (showProfile) return "profile";
+        if (showCharacterViewer) return "character";
         return "menu"; // default
     }
 

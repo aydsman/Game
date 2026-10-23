@@ -4,8 +4,9 @@ A Java-based 2D action game featuring dungeon crawling, arena combat, wave survi
 
 ## Project Stats
 
-- **Total Classes:** 105+
-- **Total Lines of Code:** 16719
+- **Total type declarations:** 260 (classes, interfaces, enums, and nested types)
+- **Java source files:** 242 (`.java` files under `src/`)
+- **Total lines of code:** 23,850 (all lines in those Java sources)
 - **Language:** Java 17+
 
 ## Table of Contents
@@ -22,13 +23,31 @@ A Java-based 2D action game featuring dungeon crawling, arena combat, wave survi
 
 ### Combat System
 
+Readable combat is built around **dodge + hurt i-frames**, **weapon identities**, and **telegraphed enemy attacks**. Numeric feel is tuned in `config/combat.properties` (or `ABYSS_COMBAT_*` / `-Dabyss.combat.*`); see that file for keys and ranges.
+
+#### Defense
+
+| Action | Binding | What it does |
+| --- | --- | --- |
+| Dodge | Shift | Short dash with invulnerability. Direction follows movement keys, or aim if standing still. Collision-resolved so it cannot pass through walls. |
+| Hurt i-frames | automatic | After a hit lands, further hits are ignored for a short window so overlapping enemies cannot delete you in one frame. |
+| Worn armor | equipped clothing | Top / bottom / accessory each cut incoming damage. Defense potions stack with this, capped so you stay killable. |
+
+A cyan ring around the player means a defensive window is open. A `DODGE` label appears when a hit is negated by the dash. The HUD pip next to the HP bar is the dodge cooldown.
+
+#### Hit feedback
+
+- Crits roll from the skill tree plus perks and draw as a large gold number with extra sparks.
+- Heavy hits and crits freeze entity simulation briefly (hitstop). Camera, HUD and pause still run.
+- Melee knockback uses each weapon's force, not a shared constant. Hammer swings also stun; bosses resist stun so they cannot be locked.
+
 #### Ranged Weapons
 
 | Weapon | Type | Fire Mode | Description |
 | --- | --- | --- | --- |
 | Glock | Pistol | Semi-auto | Fast fire rate, low damage, high accuracy |
 | AK-47 | Rifle | Automatic | Medium fire rate, medium damage, medium accuracy |
-| Pump-Action | Shotgun | Semi-auto | Multiple pellets, high damage, low accuracy |
+| Pump-Action | Shotgun | Semi-auto | Multiple pellets; damage drops with distance so the burst is close-range only |
 | P90 | SMG | Automatic | Very fast fire rate, low damage, medium accuracy |
 | Sniper1 | Sniper | Semi-auto | Very slow fire rate, very high damage, very high accuracy |
 
@@ -43,8 +62,8 @@ All melee weapons feature:
 | Weapon | Attack Speed | Damage | Range | Special |
 | --- | --- | --- | --- | --- |
 | Sword | Balanced | Medium | Medium | 90° swing arc |
-| Hammer | Slow | High | Medium | High knockback |
-| Dagger | Fast | Low | Low | Quick strikes |
+| Hammer | Slow | High | Medium | High knockback and on-hit stun |
+| Dagger | Fast | Low | Low | 3-hit combo; finisher hits harder and wider |
 | Mace | Slow | High | Medium | Heavy impact |
 | Scythe | Medium | Medium | High | Wide arc |
 
@@ -54,15 +73,16 @@ All melee weapons feature:
 - **Fire** - Offensive fire magic
 - **Light** - Healing and protection
 - **Earth** - Barriers and crushing attacks
-- **Lightning** - Speed and chain attacks
+- **Lightning** - Chain Bolt, Stun Field and Shock Burst (shared move templates; they deal damage)
 - **Water** - Control and freezing
 
 ### Entity System
 
-- **Player**: Leveling, XP progression, stats tracking (kills, damage, accuracy)
-- **Enemies**: 5 variants with different behaviors and detection radii
-- **Bosses**: Enhanced stats with unique behaviors
-- **Mini-bosses**: Mid-tier challenging enemies
+- **Player**: Leveling, XP progression, stats tracking (kills, damage, accuracy), dodge, i-frames
+- **Enemy roles**: strikers (chase), kiters (hold range), closers (shotgun rush), slammers (telegraphed ground slam)
+- **Bosses / mini-bosses**: chase plus the same telegraphed slam; stun is shortened so they cannot be locked
+- **Summons**: equipped companion ticks damage (and optional stun) on the nearest target in range
+- **Perks**: unlock automatically at account levels 5 / 10 / 15 (Headhunter, Iron Reflex, Bloodletter)
 
 ### Wave System
 
@@ -201,6 +221,7 @@ First launch → CustomizeScreen (character creator)
 | Left Click | Shoot / Melee attack |
 | R | Reload |
 | 1-5 | Use Power moves (when power equipped) |
+| Shift | Dodge |
 | Space | Interact (chests) |
 
 ### Hotbar
@@ -217,8 +238,11 @@ First launch → CustomizeScreen (character creator)
 | O | Toggle debug mode |
 | U | Toggle stats panel |
 | K | Kill all enemies (debug) |
-| F | Toggle fullscreen |
+| F | Skip wave grace period |
 | Esc / P | Pause |
+
+The game launches in borderless fullscreen and scales the 1600x900 layout to fit the
+monitor. Switch between fullscreen and windowed from the Settings screen.
 
 ### Dungeon
 
@@ -421,12 +445,23 @@ Clothing shares the same 5-tier rarity system as other items. Tier affects visua
 - Dungeon/arena completion
 - Shop purchase with earned currency
 
-### Meta-Upgrades (Skill Tree)
+### Skill Tree Bonuses
 
-- +1 Starting Charm Slot (max 3)
-- +1 Starting Consumable Slot
-- Better loot box drop rates
-- Starting currency bonuses
+Three pillars (Combat, Vitality, Abundance) of five tiers each. Unlocked nodes apply
+to live gameplay through `skilltree.SkillEffects`:
+
+| Effect | Where it applies |
+| --- | --- |
+| Damage | Ranged and melee damage |
+| Crit chance | Per-shot and per-swing crits (2x damage) |
+| Reload speed | Ranged reload duration |
+| Max HP | Player max health, stacked with charms |
+| Move speed | Player movement, stacked with charms and potions |
+| Healing received | All healing applied to the player |
+| Cash / gem gain | Arena run payouts and quest rewards |
+| Loot quality | Loot box tier odds |
+
+Current totals are listed on the Settings screen.
 
 ## Running the Game
 
@@ -444,6 +479,27 @@ Clothing shares the same 5-tier rarity system as other items. Tier affects visua
     # Run the game
     java -cp out Main
 
+### Tests
+
+Combat systems are covered by a dependency-free runner (no JUnit jar required):
+
+    javac -encoding UTF-8 -d out -sourcepath src src/Main.java
+    javac -encoding UTF-8 -d out-test -cp out -sourcepath test test/TestRunner.java
+    java -cp "out;out-test" TestRunner
+
+On macOS/Linux use `out:out-test` as the classpath.
+
+Optional combat tuning:
+
+    # JVM
+    java -Dabyss.combat.dodge.cooldownMs=700 -cp out Main
+
+    # Environment
+    set ABYSS_COMBAT_HURT_IFRAME_MS=400
+
+    # File (see config/combat.properties)
+    java -Dabyss.combat.config.path=config/combat.properties -cp out Main
+
 ### IDE Setup (IntelliJ IDEA)
 
 1. Open project folder
@@ -459,4 +515,4 @@ Clothing shares the same 5-tier rarity system as other items. Tier affects visua
 
 ---
 
-*Last updated: May 2026*
+*Last updated: August 2026*

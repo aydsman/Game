@@ -9,6 +9,11 @@ public class Summon3 extends Summon {
         super(tier);
         name = "Flower Pot";
         description = "He stuns enemies for a second every 10 seconds.";
+        tickDamage = 4;
+        tickIntervalMs = 10000;
+        attackRangePx = 320;
+        onHitStunMs = 1000;
+        applySummonTier();
         applyTierMultipliers();
     }
 

@@ -41,7 +41,10 @@ import combat.powers.Haki;
 import combat.powers.Shadow;
 import combat.powers.Eclipse;
 import combat.powers.Crystal;
+import combat.powers.Limitless;
+import combat.powers.Metal;
 import combat.powers.Storm;
+import combat.powers.Vessel;
 import combat.powers.Plasma;
 import combat.powers.Nightbloom;
 import combat.powers.Cataclysm;
@@ -50,8 +53,8 @@ import combat.powers.fruits.SmokeFruit;
 import combat.powers.fruits.GasFruit;
 import combat.powers.fruits.StringFruit;
 import combat.powers.fruits.SandFruit;
+import combat.powers.fruits.RubberFruit;
 import combat.powers.fruits.VenomFruit;
-import combat.powers.fruits.VinesFruit;
 import combat.powers.fruits.MagnetFruit;
 import combat.powers.fruits.GravityFruit;
 import combat.powers.fruits.MochiFruit;
@@ -65,11 +68,13 @@ import combat.consumables.Consumable3;
 import combat.consumables.DamagePotion;
 import combat.consumables.DamagePotion2;
 import combat.consumables.DamagePotion3;
+import combat.consumables.DefensePotion;
 import combat.consumables.SpeedPotion1;
 import combat.consumables.SpeedPotion2;
 import combat.consumables.SpeedPotion3;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
@@ -130,12 +135,15 @@ public class ItemRegistry {
         powers.add(new Fire()); // Tier 1
         powers.add(new Light()); // Tier 1
         powers.add(new Lightning()); // Tier 1
+        powers.add(new Shadow()); // Tier 1
         powers.add(new Water()); // Tier 1
         powers.add(new Magma()); // Tier 2
         powers.add(new Overgrowth()); // Tier 2
-        powers.add(new Shadow()); // Tier 2
         powers.add(new Crystal()); // Tier 2
+        powers.add(new Limitless()); // Tier 2
+        powers.add(new Metal()); // Tier 2
         powers.add(new Storm()); // Tier 2
+        powers.add(new Vessel()); // Tier 2
         powers.add(new BombFruit()); // Tier 2
         powers.add(new SmokeFruit()); // Tier 2
         powers.add(new GasFruit()); // Tier 2
@@ -145,8 +153,8 @@ public class ItemRegistry {
         powers.add(new Haki()); // Tier 3
         powers.add(new Eclipse()); // Tier 3
         powers.add(new Plasma()); // Tier 3
+        powers.add(new RubberFruit()); // Tier 3
         powers.add(new VenomFruit()); // Tier 3
-        powers.add(new VinesFruit()); // Tier 3
         powers.add(new MagnetFruit()); // Tier 3
         powers.add(new GravityFruit()); // Tier 3
         powers.add(new EarthV2()); // Tier 4
@@ -158,12 +166,12 @@ public class ItemRegistry {
         powers.add(new Nightbloom()); // Tier 4
         powers.add(new MochiFruit()); // Tier 4
         powers.add(new OpOpFruit()); // Tier 4
-        powers.add(new LeopardFruit()); // Tier 4
+        powers.add(new QuakeFruit()); // Tier 4
         powers.add(new Infinity()); // Tier 5
         powers.add(new KingOfCurses()); // Tier 5
         powers.add(new RinneSharingan()); // Tier 5
         powers.add(new Cataclysm()); // Tier 5
-        powers.add(new QuakeFruit()); // Tier 5
+        powers.add(new LeopardFruit()); // Tier 5
         powers.add(new NikaFruit()); // Tier 5
 
         // Consumables sorted by name, then by tier
@@ -176,6 +184,13 @@ public class ItemRegistry {
         consumables.add(new SpeedPotion1()); // Tier 1 - small speed boost
         consumables.add(new SpeedPotion2()); // Tier 2 - medium speed boost
         consumables.add(new SpeedPotion3()); // Tier 3 - large speed boost
+        consumables.add(new DefensePotion()); // Tier 1 - incoming damage reduction
+
+        sortWeaponsByClassThenTier(weapons);
+        sortCharmsByTypeThenTier(charms);
+        sortByTierThenName(summons);
+        sortByTierThenName(powers);
+        sortConsumablesByTypeThenTier(consumables);
 
         // Add all to combined list
         allItems.addAll(weapons);
@@ -207,6 +222,70 @@ public class ItemRegistry {
 
     public List<Item> getConsumables() {
         return consumables;
+    }
+
+    private void sortByTierThenName(List<Item> items) {
+        items.sort(Comparator
+                .comparingInt(Item::getTier)
+                .thenComparing(Item::getName, String.CASE_INSENSITIVE_ORDER));
+    }
+
+    private void sortWeaponsByClassThenTier(List<Item> items) {
+        // Weapons: guns first, then melee, then by tier, then name.
+        items.sort(Comparator
+                .comparingInt(this::weaponClassOrder)
+                .thenComparingInt(Item::getTier)
+                .thenComparing(Item::getName, String.CASE_INSENSITIVE_ORDER));
+    }
+
+    private void sortCharmsByTypeThenTier(List<Item> items) {
+        // Charms grouped by type alphabetically: Damage, Health, Speed.
+        items.sort(Comparator
+                .comparingInt(this::charmTypeOrder)
+                .thenComparingInt(Item::getTier)
+                .thenComparing(Item::getName, String.CASE_INSENSITIVE_ORDER));
+    }
+
+    private void sortConsumablesByTypeThenTier(List<Item> items) {
+        // Consumables grouped by type alphabetically: Damage, Health, Speed.
+        items.sort(Comparator
+                .comparingInt(this::consumableTypeOrder)
+                .thenComparingInt(Item::getTier)
+                .thenComparing(Item::getName, String.CASE_INSENSITIVE_ORDER));
+    }
+
+    private int weaponClassOrder(Item item) {
+        if (item instanceof Ranged) {
+            return 0; // guns first
+        }
+        if (item instanceof Melee) {
+            return 1; // then melee
+        }
+        return 2;
+    }
+
+    private int charmTypeOrder(Item item) {
+        String name = item.getName() == null ? "" : item.getName().toLowerCase();
+        if (name.contains("damage")) return 0;
+        if (name.contains("health")) return 1;
+        if (name.contains("speed")) return 2;
+        return 3;
+    }
+
+    private int consumableTypeOrder(Item item) {
+        if (item instanceof combat.consumables.Consumable c) {
+            return switch (c.getEffectType()) {
+                case DAMAGE_BOOST -> 0;
+                case HEALTH_RESTORE -> 1;
+                case SPEED_BOOST -> 2;
+                default -> 3;
+            };
+        }
+        String name = item.getName() == null ? "" : item.getName().toLowerCase();
+        if (name.contains("damage")) return 0;
+        if (name.contains("health")) return 1;
+        if (name.contains("speed")) return 2;
+        return 3;
     }
 
     public List<Item> getItemsByTier(int tier) {

@@ -75,6 +75,9 @@ public class Lootbox1 extends LootBox {
         addItem("Power", "Water", 1.0);
         addItem("Power", "Magma", 0.85);
         addItem("Power", "Overgrowth", 0.7);
+        addItem("Power", "Metal", 0.7);
+        addItem("Power", "Vessel", 0.7);
+        addItem("Power", "Limitless", 0.7);
         addItem("Power", "EarthV2", 0.6);
         addItem("Power", "FireV2", 0.6);
         addItem("Power", "LightningV2", 0.55);

@@ -6,17 +6,28 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import combat.CombatTuning;
+import combat.DamageRoll;
+import combat.Hitstop;
 import combat.Projectile;
 import combat.Melee;
 import combat.Item;
+import combat.armor.WornArmor;
 import combat.consumables.Consumable;
-import combat.ranged.pistols.Pistol1;
-import combat.ranged.rifles.Rifle1;
+import combat.defense.DamageOutcome;
+import combat.defense.DodgeState;
+import combat.defense.InvulnerabilityWindow;
+import progression.PerkService;
+import util.CombatFeedback;
 import util.KeyHandler;
 import util.MouseHandler;
 import currency.CurrencyManager;
 import java.awt.Rectangle;
-import java.util.List;
+import mastery.MasteryService;
+import player.CharacterAppearance;
+import player.CharacterRenderer;
+import player.CharacterRenderer.Direction;
+import skilltree.SkillEffects;
 
 public class Player extends Entity {
 
@@ -56,10 +67,36 @@ public class Player extends Entity {
     private double baseDamage; // Base damage multiplier before charm effects
     private Map<Consumable.ConsumableEffectType, ActiveConsumableEffect> activeEffects = new HashMap<>();
     private CurrencyManager currencyManager = new CurrencyManager();
+    private util.CombatFeedback feedback;
+    // Latest arena context, kept so knockback can respect walls without threading it through combat calls.
+    private List<Rectangle> arenaObstacles;
+    private int arenaWidth;
+    private int arenaHeight;
 
     // Persistent player stats (loaded from save)
     private int playerLevel = 1;
     private int playerXP = 0;
+
+    private static final int CHARACTER_RENDER_SIZE = 128;
+    private static final long WALK_FRAME_MS = 170;
+    private final CharacterRenderer characterRenderer = new CharacterRenderer();
+    private boolean characterMoving;
+    private int characterWalkFrame;
+    private long characterWalkFrameChangedMs;
+
+    private final CombatTuning tuning = CombatTuning.active();
+    private final DodgeState dodge = new DodgeState(tuning);
+    /**
+     * Invulnerability granted after a hit lands. Without it, overlapping enemies each deal full
+     * damage on the same frame and a crowd deletes the player faster than any of them can be read.
+     */
+    private final InvulnerabilityWindow hurtInvulnerability =
+            new InvulnerabilityWindow(tuning.getHurtInvulnerabilityMs());
+    private boolean dodgeKeyHeldLastFrame = false;
+    private Hitstop hitstop;
+    private double wornArmorMitigation = 0.0;
+    /** Incoming damage cannot be reduced below this fraction of its original amount. */
+    private static final double MIN_INCOMING_DAMAGE_FRACTION = 0.25;
 
     public Player(int x, int y) {
         super(x, y);
@@ -72,17 +109,28 @@ public class Player extends Entity {
     public void playerSpawn() {
         // Load persistent stats from save data
         loadPersistentStats();
+        refreshCharacterAppearance();
 
         // Base combat stats (level does not modify these; charms/consumables can)
         baseHp = 200;
         baseMaxHp = 200;
         hp = baseHp;
         maxHp = (int) baseMaxHp;
-        baseSpeed = 7.0;
+        baseSpeed = 3.5;
         speed = baseSpeed;
         baseDamage = 1.0;
         damage = baseDamage;
         dead = false;
+        characterMoving = false;
+        characterWalkFrame = 0;
+        characterWalkFrameChangedMs = System.currentTimeMillis();
+
+        // A fresh run must not inherit a spent dodge cooldown or leftover invulnerability.
+        dodge.reset();
+        hurtInvulnerability.reset();
+        dodgeKeyHeldLastFrame = false;
+        clearStun();
+        refreshDefensiveBonuses();
 
         // combat
         ranged = true;
@@ -111,7 +159,23 @@ public class Player extends Entity {
         // Set player reference in inventory for charm effects
         inventory.setPlayer(this);
 
-        System.out.println("Player spawned - Level: " + playerLevel + ", HP: " + (int)baseHp + ", Speed: " + String.format("%.1f", baseSpeed));
+        // Fold in skill tree bonuses (charms are applied again as they get equipped)
+        recalculateCharmEffects();
+
+        System.out.println("Player spawned - Level: " + playerLevel + ", HP: " + (int)maxHp + ", Speed: " + String.format("%.1f", speed));
+    }
+
+    /** Reloads the saved body and palette without rebuilding the player or changing combat state. */
+    public void refreshCharacterAppearance() {
+        save.SaveData saveData = save.SaveManager.load();
+        CharacterAppearance appearance = saveData != null ? saveData.getAppearance() : null;
+        if (appearance == null) {
+            appearance = new CharacterAppearance();
+        }
+        characterRenderer.loadAssets(
+                appearance,
+                CharacterRenderer.getDefaultSkinPalettes(),
+                saveData != null ? saveData.getEquippedClothingStyles() : java.util.Map.of());
     }
 
     // Load persistent stats from save data
@@ -361,7 +425,7 @@ public class Player extends Entity {
         };
     }
 
-    // Recalculate HP, speed, and damage from each equipped charm (additive stacking)
+    // Recalculate HP, speed, and damage from each equipped charm plus skill tree (additive stacking)
     public void recalculateCharmEffects() {
         double totalHpBoost = 0;
         double totalSpeedBoost = 0;
@@ -374,10 +438,20 @@ public class Player extends Entity {
                 totalDamageBoost += charm.getDamageBonusFraction();
             }
         }
-        setHp(baseHp + (baseHp * totalHpBoost));
+        totalHpBoost += SkillEffects.maxHpBonusFraction();
+        totalSpeedBoost += SkillEffects.moveSpeedBonusFraction();
+        totalDamageBoost += SkillEffects.damageBonusFraction();
+
+        double hpFraction = maxHp > 0 ? (hp / maxHp) : 1.0;
         setMaxHp(baseMaxHp + (baseMaxHp * totalHpBoost));
+        setHp(Math.min(maxHp, maxHp * hpFraction));
         speed = baseSpeed + (baseSpeed * totalSpeedBoost);
         damage = baseDamage + (baseDamage * totalDamageBoost);
+    }
+
+    @Override
+    public void heal(double amount) {
+        super.heal(amount * SkillEffects.healingMultiplier());
     }
 
     public void resetMouseClicks(MouseHandler mouse) {
@@ -395,21 +469,38 @@ public class Player extends Entity {
      * @param arenaObstacles solid rectangles in world space; may be null or empty
      */
     public void update(KeyHandler key, MouseHandler mouse, int arenaWidth, int arenaHeight, List<Rectangle> arenaObstacles) {
+        this.arenaObstacles = arenaObstacles;
+        this.arenaWidth = arenaWidth;
+        this.arenaHeight = arenaHeight;
+        long now = System.currentTimeMillis();
+
+        handleDodgeInput(key, now);
+
         int oldX = x;
         int oldY = y;
         int newX = oldX;
         int newY = oldY;
-        if (key != null) {
-            if (key.upPressed)    newY -= (int) speed;
-            if (key.downPressed)  newY += (int) speed;
-            if (key.leftPressed)  newX -= (int) speed;
-            if (key.rightPressed) newX += (int) speed;
+
+        // A dodge in flight owns movement: the direction is committed at the start of the dash, so
+        // steering out of it would erase the commitment the dodge is supposed to represent.
+        int[] dodgeStep = dodge.sampleDisplacement(now);
+        newX += dodgeStep[0];
+        newY += dodgeStep[1];
+
+        if (!dodge.isDashing(now) && key != null) {
+            int moveStep = (int) Math.round(getTotalSpeed());
+            if (key.upPressed)    newY -= moveStep;
+            if (key.downPressed)  newY += moveStep;
+            if (key.leftPressed)  newX -= moveStep;
+            if (key.rightPressed) newX += moveStep;
         }
 
+        // Dodge movement is collision-resolved like any other movement, so it cannot cross a wall.
         int[] resolved = world.arena.ArenaCollision.resolveMovement(
                 oldX, oldY, newX, newY, w, l, arenaObstacles, arenaWidth, arenaHeight);
         x = resolved[0];
         y = resolved[1];
+        updateCharacterAnimation(oldX, oldY, now);
 
         // Handle reload
         if (key != null && key.rPressed && heldWeapon instanceof combat.Ranged) {
@@ -418,11 +509,11 @@ public class Player extends Entity {
 
         // Update weapon reload state
         if (heldWeapon instanceof combat.Ranged) {
-            ((combat.Ranged) heldWeapon).updateReload();
+            ((combat.Ranged) heldWeapon).updateReload(SkillEffects.reloadTimeMultiplier());
         }
 
         // Handle ranged or melee attacks
-        long currentTime = System.currentTimeMillis();
+        long currentTime = now;
         if (heldWeapon != null) {
             if (heldWeapon instanceof Melee) {
                 // Melee swing attack
@@ -452,9 +543,383 @@ public class Player extends Entity {
 
         // check death
         checkDeath();
-        if (dead) {
-            System.out.println("dead");
+    }
+
+    public void setCombatFeedback(util.CombatFeedback feedback) {
+        this.feedback = feedback;
+    }
+
+    /**
+     * Starts a dodge on the rising edge of the dodge key.
+     *
+     * <p>Direction comes from the movement keys, falling back to the aim direction when the player is
+     * standing still, so a dodge is never wasted on a stationary player.
+     */
+    private void handleDodgeInput(KeyHandler key, long nowMs) {
+        if (key == null) {
+            dodgeKeyHeldLastFrame = false;
+            return;
         }
+        boolean pressedThisFrame = key.shiftPressed && !dodgeKeyHeldLastFrame;
+        dodgeKeyHeldLastFrame = key.shiftPressed;
+        if (!pressedThisFrame) {
+            return;
+        }
+
+        double dirX = 0;
+        double dirY = 0;
+        if (key.upPressed)    dirY -= 1;
+        if (key.downPressed)  dirY += 1;
+        if (key.leftPressed)  dirX -= 1;
+        if (key.rightPressed) dirX += 1;
+        if (dirX == 0 && dirY == 0) {
+            dirX = Math.cos(barrelAngle);
+            dirY = Math.sin(barrelAngle);
+        }
+        dodge.tryStart(nowMs, dirX, dirY);
+    }
+
+    private void updateCharacterAnimation(int oldX, int oldY, long nowMs) {
+        boolean movedThisFrame = x != oldX || y != oldY;
+        if (!movedThisFrame) {
+            characterWalkFrame = 0;
+            characterWalkFrameChangedMs = nowMs;
+        } else if (!characterMoving) {
+            characterWalkFrame = 0;
+            characterWalkFrameChangedMs = nowMs;
+        } else if (nowMs - characterWalkFrameChangedMs >= WALK_FRAME_MS) {
+            characterWalkFrame = (characterWalkFrame + 1) % 2;
+            characterWalkFrameChangedMs = nowMs;
+        }
+        characterMoving = movedThisFrame;
+    }
+
+    private Direction getCharacterDirection() {
+        int octant = Math.floorMod(
+                (int) Math.round(barrelAngle / (Math.PI / 4.0)), 8);
+        return switch (octant) {
+            case 0 -> Direction.RIGHT;
+            case 1 -> Direction.DOWN_RIGHT;
+            case 2 -> Direction.DOWN;
+            case 3 -> Direction.DOWN_LEFT;
+            case 4 -> Direction.LEFT;
+            case 5 -> Direction.UP_LEFT;
+            case 6 -> Direction.UP;
+            default -> Direction.UP_RIGHT;
+        };
+    }
+
+    public void setHitstop(Hitstop hitstop) {
+        this.hitstop = hitstop;
+    }
+
+    public InvulnerabilityWindow getHurtInvulnerability() {
+        return hurtInvulnerability;
+    }
+
+    /**
+     * Re-reads clothing mitigation and perk-driven dodge cooldown. Called on spawn and whenever the
+     * persistent level might have changed mid-run.
+     */
+    public void refreshDefensiveBonuses() {
+        save.SaveData saveData = save.SaveManager.load();
+        wornArmorMitigation = WornArmor.mitigationFor(saveData == null ? null : saveData.getAppearance());
+        dodge.setCooldownScale(PerkService.dodgeCooldownMultiplier(playerLevel));
+    }
+
+    @Override
+    protected void drawBody(java.awt.Graphics2D g, int cameraX, int cameraY) {
+        boolean holdingGun = heldWeapon instanceof combat.Ranged;
+        Direction bodyDirection = getCharacterDirection();
+        java.awt.image.BufferedImage frame = holdingGun
+                ? characterRenderer.getGunBodyFrame(bodyDirection, characterMoving, characterWalkFrame)
+                : characterRenderer.getFrame(bodyDirection, characterMoving, characterWalkFrame);
+        if (frame == null) {
+            super.drawBody(g, cameraX, cameraY);
+            return;
+        }
+
+        if (holdingGun) {
+            java.awt.image.BufferedImage rearArm = characterRenderer.getGunArmFrame(
+                    CharacterRenderer.getAimDirection(barrelAngle), true);
+            drawCharacterLayer(g, rearArm, cameraX, cameraY);
+        }
+        drawCharacterLayer(g, frame, cameraX, cameraY);
+    }
+
+    @Override
+    protected void drawForeground(java.awt.Graphics2D g, int cameraX, int cameraY) {
+        if (!(heldWeapon instanceof combat.Ranged)) {
+            return;
+        }
+        java.awt.image.BufferedImage frontArm = characterRenderer.getGunArmFrame(
+                CharacterRenderer.getAimDirection(barrelAngle), false);
+        drawCharacterLayer(g, frontArm, cameraX, cameraY);
+    }
+
+    @Override
+    protected int getWeaponDrawCenterY() {
+        if (!(heldWeapon instanceof combat.Ranged)) {
+            return super.getWeaponDrawCenterY();
+        }
+        int footOffset = (int) Math.round(90.0 / 96.0 * CHARACTER_RENDER_SIZE);
+        int shoulderPivotOffset = (int) Math.round(40.0 / 96.0 * CHARACTER_RENDER_SIZE);
+        return y + l - footOffset + shoulderPivotOffset;
+    }
+
+    @Override
+    protected double getRangedWeaponVisualScale() {
+        return 0.65 * CHARACTER_RENDER_SIZE / 96.0;
+    }
+
+    private void drawCharacterLayer(
+            java.awt.Graphics2D g,
+            java.awt.image.BufferedImage layer,
+            int cameraX,
+            int cameraY) {
+        if (layer == null) {
+            return;
+        }
+        int drawX = getCenterX() - cameraX - CHARACTER_RENDER_SIZE / 2;
+        // Source feet sit at y=90 of 96. Anchor them to the bottom of the combat hitbox.
+        int footOffset = (int) Math.round(90.0 / 96.0 * CHARACTER_RENDER_SIZE);
+        int drawY = y + l - cameraY - footOffset;
+
+        java.awt.Graphics2D spriteGraphics = (java.awt.Graphics2D) g.create();
+        spriteGraphics.setRenderingHint(
+                java.awt.RenderingHints.KEY_INTERPOLATION,
+                java.awt.RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+        spriteGraphics.drawImage(
+                layer, drawX, drawY, CHARACTER_RENDER_SIZE, CHARACTER_RENDER_SIZE, null);
+        spriteGraphics.dispose();
+    }
+
+    /** Keeps the health bar above the taller character art instead of across its torso. */
+    @Override
+    public void displayStats(java.awt.Graphics2D g, int cameraX, int cameraY) {
+        int barWidth = w;
+        int barHeight = 5;
+        int barX = x - cameraX - 1;
+        int footOffset = (int) Math.round(90.0 / 96.0 * CHARACTER_RENDER_SIZE);
+        int barY = y + l - cameraY - footOffset - 8;
+
+        g.setColor(Color.RED);
+        g.fillRect(barX, barY, barWidth, barHeight);
+        g.setColor(Color.GREEN);
+        int currentBarWidth = (int) ((hp / maxHp) * barWidth);
+        g.fillRect(barX, barY, currentBarWidth, barHeight);
+        g.setColor(Color.BLACK);
+        g.drawRect(barX, barY, barWidth, barHeight);
+    }
+
+    /**
+     * Draws the player, plus a ring while a defensive window is open.
+     *
+     * <p>Invulnerability the player cannot see is indistinguishable from damage that missed, so the
+     * ring is what turns i-frames from a hidden rule into a readable one.
+     */
+    @Override
+    public void draw(java.awt.Graphics2D g, int cameraX, int cameraY) {
+        super.draw(g, cameraX, cameraY);
+
+        long now = System.currentTimeMillis();
+        if (!isInvulnerable(now)) {
+            return;
+        }
+        boolean dashing = dodge.isDashing(now);
+        java.awt.Stroke previousStroke = g.getStroke();
+        g.setStroke(new java.awt.BasicStroke(dashing ? 3f : 2f));
+        g.setColor(dashing ? new Color(150, 225, 255, 220) : new Color(255, 255, 255, 120));
+        int inset = 3;
+        g.drawOval(x - cameraX - inset, y - cameraY - inset, w + inset * 2, l + inset * 2);
+        g.setStroke(previousStroke);
+    }
+
+    public DodgeState getDodgeState() {
+        return dodge;
+    }
+
+    /** True while any defensive window is open; used by the renderer to show the player is safe. */
+    public boolean isInvulnerable(long nowMs) {
+        return dodge.isInvulnerable(nowMs) || hurtInvulnerability.isActive(nowMs);
+    }
+
+    public boolean isDodging(long nowMs) {
+        return dodge.isDashing(nowMs);
+    }
+
+    /**
+     * Single entry point for every hit the player lands: applies damage, records stats and weapon
+     * mastery, spawns feedback, optionally knocks the target back, and pays the kill reward.
+     *
+     * @param fromHeldWeapon true for bullet / swing damage, false for powers and burn ticks
+     * @param knockbackPx    distance to shove the target away from the player, 0 for none
+     */
+    public void dealDamage(Entity target, double amount, boolean fromHeldWeapon, int knockbackPx) {
+        applyOutgoingDamage(target, amount, false, fromHeldWeapon, knockbackPx, 0L);
+    }
+
+    /**
+     * Lands a rolled hit, carrying the crit flag through to feedback and optionally applying a stun.
+     *
+     * @param roll        resolved damage and crit state
+     * @param knockbackPx distance to shove the target away from the player, 0 for none
+     * @param stunMs      stun to apply on hit, 0 for none; the target may shorten it
+     */
+    public void dealDamage(Entity target, DamageRoll roll, boolean fromHeldWeapon, int knockbackPx, long stunMs) {
+        if (roll == null) {
+            return;
+        }
+        applyOutgoingDamage(target, roll.getAmount(), roll.isCritical(), fromHeldWeapon, knockbackPx, stunMs);
+    }
+
+    private void applyOutgoingDamage(Entity target,
+                                     double amount,
+                                     boolean critical,
+                                     boolean fromHeldWeapon,
+                                     int knockbackPx,
+                                     long stunMs) {
+        if (target == null || target.isDead() || amount <= 0) {
+            return;
+        }
+        target.takeDamage(amount);
+        stats.addDamageDealt(amount);
+        if (fromHeldWeapon && heldWeapon != null) {
+            MasteryService.grantWeaponDamageXP(heldWeapon.getName(), amount);
+        }
+        target.flashHit();
+        if (feedback != null) {
+            feedback.addHit(target.getCenterX(), target.getCenterY(), amount, false, critical);
+        }
+        requestHitstopForHit(amount, critical);
+        if (fromHeldWeapon) {
+            applyLifesteal(amount);
+        }
+        if (!target.isDead()) {
+            if (knockbackPx > 0) {
+                target.knockBack(getCenterX(), getCenterY(), knockbackPx, arenaObstacles, arenaWidth, arenaHeight);
+            }
+            if (stunMs > 0) {
+                target.applyStun(stunMs);
+            }
+        }
+        if (target.isDead()) {
+            awardKill(target, fromHeldWeapon);
+        }
+    }
+
+    private void requestHitstopForHit(double amount, boolean critical) {
+        if (hitstop == null) {
+            return;
+        }
+        long duration = 0;
+        if (critical) {
+            duration = tuning.getHitstopCritMs();
+        } else if (amount >= tuning.getHitstopHeavyDamageThreshold()) {
+            duration = tuning.getHitstopHeavyMs();
+        }
+        if (duration > 0) {
+            hitstop.request(System.currentTimeMillis(), duration);
+        }
+    }
+
+    private void applyLifesteal(double amount) {
+        double fraction = PerkService.lifestealFraction(playerLevel);
+        if (fraction <= 0 || amount <= 0) {
+            return;
+        }
+        heal(amount * fraction);
+    }
+
+    /** Kill payout (kill count, weapon mastery, XP, gold); pays out at most once per victim. */
+    public void awardKill(Entity victim, boolean creditHeldWeapon) {
+        if (victim == null || !victim.claimKillReward()) {
+            return;
+        }
+        stats.addKill();
+        if (creditHeldWeapon && heldWeapon != null) {
+            MasteryService.grantWeaponKillXP(heldWeapon.getName(), 1);
+        }
+        int xp = victim.getXpValue();
+        currencyManager.addGold(victim.getGoldValue());
+        if (xp > 0) {
+            gainXP(xp);
+            save.SaveManager.addXP(xp);
+            // Sync local level/XP fields immediately so the HUD updates in real-time
+            save.SaveData updatedData = save.SaveManager.load();
+            playerLevel = updatedData.getPlayerLevel();
+            playerXP = updatedData.getPlayerXP();
+        }
+        if (feedback != null) {
+            feedback.addShake(3.0, 110);
+        }
+    }
+
+    /**
+     * Delegates to {@link #applyIncomingDamage(double)} so that every route into the player's health
+     * — enemy bullets, enemy melee, slams, future hazards — passes through the same defensive gate.
+     */
+    @Override
+    public void takeDamage(double damageAmount) {
+        applyIncomingDamage(damageAmount);
+    }
+
+    /**
+     * Single entry point for damage aimed at the player. Applies dodge and post-hit invulnerability,
+     * records the hit in run stats, and reports what happened.
+     *
+     * <p>Callers must not record damage-taken stats themselves: a negated hit is not damage taken,
+     * and this method already books the ones that land.
+     *
+     * @return how the hit resolved; see {@link DamageOutcome}
+     */
+    public DamageOutcome applyIncomingDamage(double amount) {
+        if (amount <= 0 || dead) {
+            return DamageOutcome.IGNORED;
+        }
+        long now = System.currentTimeMillis();
+
+        if (dodge.isInvulnerable(now)) {
+            if (feedback != null) {
+                feedback.addLabel(getCenterX(), y, "DODGE", CombatFeedback.DODGE_LABEL_COLOR);
+            }
+            return DamageOutcome.NEGATED_DODGE;
+        }
+        if (hurtInvulnerability.isActive(now)) {
+            return DamageOutcome.NEGATED_IFRAMES;
+        }
+
+        double mitigated = amount * incomingDamageFraction();
+        if (mitigated <= 0) {
+            return DamageOutcome.IGNORED;
+        }
+
+        hurtInvulnerability.grant(now);
+        super.takeDamage(mitigated);
+        stats.addDamageTaken(mitigated);
+        flashHit();
+        if (feedback != null) {
+            feedback.addHit(getCenterX(), getCenterY(), mitigated, true);
+            feedback.addShake(Math.min(9.0, 2.0 + mitigated * 0.2), 170);
+        }
+        return DamageOutcome.APPLIED;
+    }
+
+    /**
+     * Fraction of incoming damage that actually lands after worn armor and defense potions.
+     * Never drops below {@link #MIN_INCOMING_DAMAGE_FRACTION}.
+     */
+    public double incomingDamageFraction() {
+        expireConsumableEffects();
+        double mitigation = wornArmorMitigation;
+        for (ActiveConsumableEffect effect : activeEffects.values()) {
+            if (effect.type == Consumable.ConsumableEffectType.DEFENSE_BOOST) {
+                if (Double.isFinite(effect.multiplier) && effect.multiplier > 0) {
+                    mitigation += Math.min(0.6, effect.multiplier);
+                }
+            }
+        }
+        return Math.max(MIN_INCOMING_DAMAGE_FRACTION, 1.0 - Math.max(0.0, mitigation));
     }
 
     private void handleMeleeAttack(MouseHandler mouse, Melee melee) {
@@ -523,8 +988,12 @@ public class Player extends Entity {
     public void shoot() {
         if (heldWeapon instanceof combat.Ranged) {
             combat.Ranged ranged = (combat.Ranged) heldWeapon;
-            double damageMultiplier = getTotalDamageMultiplier();
-            List<Projectile> bullets = ranged.shoot(getCenterX(), getCenterY(), barrelAngle, damageMultiplier);
+            // Rolled once per shot rather than per projectile, so a shotgun blast is one crit or none.
+            boolean critical = DamageRoll.rollsCritical(getCritChance(), Math.random());
+            double damageMultiplier = getTotalDamageMultiplier()
+                    * (critical ? SkillEffects.CRIT_DAMAGE_MULTIPLIER : 1.0);
+            List<Projectile> bullets =
+                    ranged.shoot(getCenterX(), getCenterY(), barrelAngle, damageMultiplier, critical);
             if (bullets != null) {
                 projectiles.addAll(bullets);
                 stats.addShotFired();
@@ -561,45 +1030,30 @@ public class Player extends Entity {
 
     public void checkProjectileCollisions(entity.EnemyManager enemyManager) {
         ArrayList<Projectile> toRemove = new ArrayList<>();
-        ArrayList<entity.Enemy> killedEnemies = new ArrayList<>();
         for (Projectile p : projectiles) {
+            // Damage is read at impact, not at fire time, so distance drop-off applies.
+            DamageRoll roll = DamageRoll.resolved(p.getEffectiveDamage(), p.isCritical());
+            boolean hitSomething = false;
             for (entity.Enemy enemy : enemyManager.getEnemies()) {
                 if (enemy.checkCollision(p.getX(), p.getY())) {
-                    enemy.takeDamage(p.getDamage());
-                    if (enemy.isDead() && !killedEnemies.contains(enemy)) {
-                        killedEnemies.add(enemy);
-                        stats.addKill();
-                    }
+                    dealDamage(enemy, roll, true, 0, 0L);
                     stats.addShotHit();
-                    stats.addDamageDealt(p.getDamage());
                     toRemove.add(p);
-                    break; // Bullet hits one enemy then continues
+                    hitSomething = true;
+                    break; // Bullet hits one enemy then stops
                 }
             }
             // Also check collision with active boss
-            if (!toRemove.contains(p) && enemyManager.getActiveBoss() != null) {
+            if (!hitSomething && enemyManager.getActiveBoss() != null) {
                 entity.Boss boss = enemyManager.getActiveBoss();
                 if (boss.checkCollision(p.getX(), p.getY())) {
-                    boss.takeDamage(p.getDamage());
+                    dealDamage(boss, roll, true, 0, 0L);
                     stats.addShotHit();
-                    stats.addDamageDealt(p.getDamage());
                     toRemove.add(p);
                 }
             }
         }
         projectiles.removeAll(toRemove);
-        // Gain XP and Gold from killed enemies
-        for (entity.Enemy enemy : killedEnemies) {
-            int xp = enemy.getXpValue();
-            gainXP(xp);
-            currencyManager.addGold(enemy.getGoldValue());
-            // Save XP to persistent storage
-            save.SaveManager.addXP(xp);
-            // Sync local level/XP fields immediately so HUD updates in real-time
-            save.SaveData updatedData = save.SaveManager.load();
-            playerLevel = updatedData.getPlayerLevel();
-            playerXP = updatedData.getPlayerXP();
-        }
     }
 
     public ArrayList<Projectile> getProjectiles() {
@@ -666,13 +1120,45 @@ public class Player extends Entity {
         return totalMultiplier;
     }
 
-    public int getEffectiveMeleeDamage() {
-        if (heldWeapon instanceof combat.Melee) {
-            combat.Melee melee = (combat.Melee) heldWeapon;
-            double multiplier = getTotalDamageMultiplier();
-            return (int) (melee.getDamage() * multiplier);
+    /** Movement speed including active speed-boost consumables. */
+    public double getTotalSpeed() {
+        expireConsumableEffects();
+        double total = speed;
+        for (ActiveConsumableEffect effect : activeEffects.values()) {
+            if (effect.type == Consumable.ConsumableEffectType.SPEED_BOOST) {
+                total *= effect.multiplier;
+            }
         }
-        return 0;
+        return total;
+    }
+
+    /**
+     * Rolls the damage for the melee swing in flight, including the combo finisher bonus and the crit
+     * roll. Call once per hit so each target rolls its own crit.
+     *
+     * @return the roll, or a zero roll when no melee weapon is held
+     */
+    public DamageRoll rollMeleeDamage() {
+        if (!(heldWeapon instanceof combat.Melee)) {
+            return DamageRoll.flat(0);
+        }
+        combat.Melee melee = (combat.Melee) heldWeapon;
+        double multiplier = getTotalDamageMultiplier() * melee.getActiveSwingDamageMultiplier();
+        return DamageRoll.of(
+                melee.getDamage(),
+                multiplier,
+                getCritChance(),
+                SkillEffects.CRIT_DAMAGE_MULTIPLIER,
+                Math.random());
+    }
+
+    /** Skill-tree crit chance plus unlocked perks, clamped the same way as {@link SkillEffects}. */
+    public double getCritChance() {
+        return Math.min(SkillEffects.MAX_CRIT_CHANCE, SkillEffects.critChance() + PerkService.critChanceBonus(playerLevel));
+    }
+
+    public int getEffectiveMeleeDamage() {
+        return rollMeleeDamage().getAmount();
     }
 
     /**
@@ -692,7 +1178,6 @@ public class Player extends Entity {
     public boolean handleShootingMechanics(MouseHandler mouse, KeyHandler key, boolean shouldDisableShooting, Runnable preUpdateLogic, int arenaWidth, int arenaHeight, List<Rectangle> arenaObstacles) {
         // Save original mouse state
         boolean wasLeftPressed = mouse.leftPressed;
-        boolean wasLeftClicked = mouse.leftClicked;
 
         // Disable shooting if conditions met
         if (shouldDisableShooting) {

@@ -31,32 +31,59 @@ public abstract class StandardArena extends Arena {
     }
 
     /**
-     * Layout cover pieces so arenas are not empty flat planes (axis-aligned “walls”).
+     * Outer rim plus an inner courtyard. The old layout left the inner walls short of each other
+     * at every corner, which read as a broken border rather than cover with doorways.
      */
     protected void populateDefaultObstacles() {
         clearObstacles();
+        addPerimeterWalls(48);
+
         int W = getWidth();
         int H = getHeight();
         int cx = W / 2;
         int cy = H / 2;
 
-        // Tall thin pillars (“sideways” walls)
-        addObstacle(cx - 420, cy - 280, 44, 560);
-        addObstacle(cx + 376, cy - 280, 44, 560);
+        addCourtyardFrame(cx, cy, 840, 840, 44, 180);
 
-        // Wide low bands (“front-facing” walls)
-        addObstacle(cx - 380, cy - 420, 760, 40);
-        addObstacle(cx - 380, cy + 380, 760, 40);
+        // Corner cover, inset so it does not sit on the perimeter.
+        addObstacle(200, 200, 140, 140);
+        addObstacle(W - 340, 200, 140, 140);
+        addObstacle(200, H - 340, 140, 140);
+        addObstacle(W - 340, H - 340, 140, 140);
+    }
 
-        // Corner blocks
-        addObstacle(120, 120, 160, 160);
-        addObstacle(W - 280, 120, 160, 160);
-        addObstacle(120, H - 280, 160, 160);
-        addObstacle(W - 280, H - 280, 160, 160);
+    /**
+     * Axis-aligned rectangle of walls with a centered doorway on each side.
+     *
+     * @param frameW   outer width of the courtyard
+     * @param frameH   outer height of the courtyard
+     * @param wall     wall thickness
+     * @param doorway  opening on each side; must leave a wall stub on both ends
+     */
+    protected void addCourtyardFrame(int centerX, int centerY, int frameW, int frameH, int wall, int doorway) {
+        if (frameW <= 0 || frameH <= 0 || wall <= 0) {
+            return;
+        }
+        int left = centerX - frameW / 2;
+        int top = centerY - frameH / 2;
+        int right = left + frameW;
+        int bottom = top + frameH;
+        int door = Math.max(0, Math.min(doorway, Math.min(frameW, frameH) - wall * 2));
 
-        // Inner quarter barriers
-        addObstacle(cx - 520, cy - 40, 200, 80);
-        addObstacle(cx + 320, cy - 40, 200, 80);
+        int topSpan = frameW;
+        int topSeg = Math.max(wall, (topSpan - door) / 2);
+        addObstacle(left, top, topSeg, wall);
+        addObstacle(right - topSeg, top, topSeg, wall);
+        addObstacle(left, bottom - wall, topSeg, wall);
+        addObstacle(right - topSeg, bottom - wall, topSeg, wall);
+
+        int innerTop = top + wall;
+        int innerH = frameH - wall * 2;
+        int sideSeg = Math.max(wall, (innerH - door) / 2);
+        addObstacle(left, innerTop, wall, sideSeg);
+        addObstacle(left, bottom - wall - sideSeg, wall, sideSeg);
+        addObstacle(right - wall, innerTop, wall, sideSeg);
+        addObstacle(right - wall, bottom - wall - sideSeg, wall, sideSeg);
     }
 
     protected abstract void setupEnemyTypes();

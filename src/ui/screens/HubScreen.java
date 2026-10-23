@@ -104,10 +104,10 @@ public class HubScreen {
         // Blacksmith NPC
         java.util.List<DialogBlock> blacksmithBlocks = new java.util.ArrayList<>();
         java.util.List<DialogChoice> blacksmithChoices = new java.util.ArrayList<>();
-        blacksmithBlocks.add(new DialogBlock("Welcome to my shop! I have all sorts of items for sale.", blacksmithChoices));
-        blacksmithChoices.add(new DialogChoice("Chose your gear", "screen:loadout"));
-        blacksmithChoices.add(new DialogChoice("Upgrade your gear", "next"));
-        blacksmithChoices.add(new DialogChoice("Help", "next"));
+        blacksmithBlocks.add(new DialogBlock("Bring me your gear and I'll set you up for the fight ahead.", blacksmithChoices));
+        blacksmithChoices.add(new DialogChoice("Choose your gear", "screen:loadout"));
+        blacksmithChoices.add(new DialogChoice("Upgrade your gear", "screen:crafting"));
+        blacksmithChoices.add(new DialogChoice("Check masteries", "screen:mastery"));
         blacksmithChoices.add(new DialogChoice("Leave", "next"));
         npcs.add(new NPC(centerX + 200, centerY - 100, "Blacksmith", blacksmithBlocks));
 
@@ -115,11 +115,8 @@ public class HubScreen {
         java.util.List<DialogBlock> questBlocks = new java.util.ArrayList<>();
         java.util.List<DialogChoice> questChoices = new java.util.ArrayList<>();
         questBlocks.add(new DialogBlock("Come to me to manage your quests.", questChoices));
-        questChoices.add(new DialogChoice("Daily Quests", "next"));
-        questChoices.add(new DialogChoice("Weekly Quests", "next"));
-        questChoices.add(new DialogChoice("Seasonal Quests", "next"));
-        questChoices.add(new DialogChoice("Milestone Quests", "next"));
-        questChoices.add(new DialogChoice("Help", "next"));
+        questChoices.add(new DialogChoice("View quest board", "screen:rewards"));
+        questChoices.add(new DialogChoice("Track my progress", "screen:profile"));
         questChoices.add(new DialogChoice("Leave", "next"));
         npcs.add(new NPC(centerX, centerY - 200, "Quest Giver", questBlocks));
 
@@ -128,7 +125,7 @@ public class HubScreen {
         java.util.List<DialogChoice> shopChoices = new java.util.ArrayList<>();
         shopBlocks.add(new DialogBlock("Welcome to my shop! I have all sorts of items for sale.", shopChoices));
         shopChoices.add(new DialogChoice("Enter Shop", "screen:shop"));
-        shopChoices.add(new DialogChoice("Help", "next"));
+        shopChoices.add(new DialogChoice("Help", "screen:help"));
         shopChoices.add(new DialogChoice("Leave", "next"));
         npcs.add(new NPC(centerX, centerY + 200, "Shopkeeper", shopBlocks));
 
@@ -145,12 +142,18 @@ public class HubScreen {
         java.util.List<DialogBlock> skillTreeBlocks = new java.util.ArrayList<>();
         java.util.List<DialogChoice> skillTreeChoices = new java.util.ArrayList<>();
         skillTreeBlocks.add(new DialogBlock("Enter here to unlock upgrades for your character.", skillTreeChoices));
-        skillTreeChoices.add(new DialogChoice("Enter", "next"));
-        skillTreeChoices.add(new DialogChoice("Help", "next"));
+        skillTreeChoices.add(new DialogChoice("Enter", "screen:skilltree"));
         skillTreeChoices.add(new DialogChoice("Leave", "next"));
         interactables.add(new InteractableObject(centerX - 300, centerY, "Skill Tree", null, skillTreeBlocks));
 
-        interactables.add(new InteractableObject(centerX + 300, centerY, "Your Home", null, java.util.List.of()));
+        // Your Home
+        java.util.List<DialogBlock> homeBlocks = new java.util.ArrayList<>();
+        java.util.List<DialogChoice> homeChoices = new java.util.ArrayList<>();
+        homeBlocks.add(new DialogBlock("Home. A quiet place to take stock of what you've gathered.", homeChoices));
+        homeChoices.add(new DialogChoice("Review your record", "screen:profile"));
+        homeChoices.add(new DialogChoice("Check your inventory", "screen:inventory"));
+        homeChoices.add(new DialogChoice("Leave", "next"));
+        interactables.add(new InteractableObject(centerX + 300, centerY, "Your Home", null, homeBlocks));
         
         // Portal to Arena Selection
         java.util.List<DialogBlock> portalBlocks = new java.util.ArrayList<>();
@@ -164,8 +167,7 @@ public class HubScreen {
         java.util.List<DialogBlock> lockerBlocks = new java.util.ArrayList<>();
         java.util.List<DialogChoice> lockerChoices = new java.util.ArrayList<>();
         lockerBlocks.add(new DialogBlock("Enter here to change your appearance.", lockerChoices));
-        lockerChoices.add(new DialogChoice("Enter", "next"));
-        lockerChoices.add(new DialogChoice("Help", "next"));
+        lockerChoices.add(new DialogChoice("Enter", "screen:customize"));
         lockerChoices.add(new DialogChoice("Leave", "next"));
         interactables.add(new InteractableObject(centerX - 400, centerY, "Locker", null, lockerBlocks));
 
@@ -174,7 +176,7 @@ public class HubScreen {
         java.util.List<DialogChoice> craftingChoices = new java.util.ArrayList<>();
         craftingBlocks.add(new DialogBlock("Enter here to craft and merge items.", craftingChoices));
         craftingChoices.add(new DialogChoice("Enter", "screen:crafting"));
-        craftingChoices.add(new DialogChoice("Help", "next"));
+        craftingChoices.add(new DialogChoice("Help", "screen:help"));
         craftingChoices.add(new DialogChoice("Leave", "next"));
         interactables.add(new InteractableObject(centerX + 400, centerY, "Crafting Station", null, craftingBlocks));
     }

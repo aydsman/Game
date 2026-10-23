@@ -1,0 +1,13 @@
+package skilltree;
+
+public enum SkillEffectType {
+    DAMAGE_MULTIPLIER_PCT,
+    RELOAD_SPEED_PCT,
+    CRIT_CHANCE_PCT,
+    MAX_HP_PCT,
+    MOVE_SPEED_PCT,
+    HEALING_RECEIVED_PCT,
+    CASH_GAIN_PCT,
+    GEM_GAIN_PCT,
+    LOOT_QUALITY_PCT
+}

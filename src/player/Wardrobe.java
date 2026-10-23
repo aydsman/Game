@@ -89,6 +89,7 @@ public class Wardrobe {
 
     public void unlockDefaults() {
         unlock("tshirt");
+        unlock("basicpants");
         unlock("shorts");
     }
 }

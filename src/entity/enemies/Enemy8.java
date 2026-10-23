@@ -12,7 +12,7 @@ public class Enemy8 extends MeleeEnemy { // Dagger Enemy
         // Dagger enemies: fast attacks, low damage, high speed
         hp = 100;
         maxHp = 100;
-        speed = 5.2;
+        speed = 2.6;
         damage = 18.0;
         preferredDistance = 35.0; // Close for quick stabs
         // Fast attack speed for daggers

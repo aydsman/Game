@@ -12,7 +12,7 @@ public class Enemy9 extends MeleeEnemy { // Scythe Enemy
         // Scythe enemies: low damage but good for hordes, medium speed
         hp = 110;
         maxHp = 110;
-        speed = 4.2;
+        speed = 2.1;
         damage = 15.0;
         preferredDistance = 55.0; // Longer reach for scythe
         // Medium attack speed, good for crowd control

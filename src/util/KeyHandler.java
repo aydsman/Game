@@ -22,6 +22,8 @@ public class KeyHandler implements KeyListener {
     public boolean fPressed = false;
     public boolean tabPressed = false;
     public boolean enterPressed = false;
+    /** Dodge. Either shift key works so the binding is reachable with both hands. */
+    public boolean shiftPressed = false;
 
     @Override
     public void keyPressed(KeyEvent e) {
@@ -46,6 +48,7 @@ public class KeyHandler implements KeyListener {
         if (code == KeyEvent.VK_F) fPressed = true;
         if (code == KeyEvent.VK_TAB) tabPressed = true;
         if (code == KeyEvent.VK_ENTER) enterPressed = true;
+        if (code == KeyEvent.VK_SHIFT) shiftPressed = true;
     }
 
     @Override
@@ -71,6 +74,7 @@ public class KeyHandler implements KeyListener {
         if (code == KeyEvent.VK_F) fPressed = false;
         if (code == KeyEvent.VK_TAB) tabPressed = false;
         if (code == KeyEvent.VK_ENTER) enterPressed = false;
+        if (code == KeyEvent.VK_SHIFT) shiftPressed = false;
     }
 
     @Override
